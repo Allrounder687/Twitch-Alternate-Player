@@ -279,6 +279,7 @@ const App: React.FC = () => {
           <span>M</span><span>Mute</span>
           <span>F</span><span>Fullscreen</span>
           <span>T</span><span>Theater</span>
+          <span>C</span><span>Cycle Layout</span>
           <span>J / L</span><span>-10s / +10s</span>
           <span>&uarr; / &darr;</span><span>Volume</span>
         </div>

@@ -515,6 +515,41 @@ export function createCustomControls(
   });
   updateAudioOnlyBtn();
 
+  // === Chat/Video Layout Cycling ===
+  type LayoutMode = 'both' | 'video-only' | 'chat-only';
+  const LAYOUT_CYCLE: LayoutMode[] = ['both', 'video-only', 'chat-only'];
+  let layoutModeIdx = 0;
+
+  const setLayoutMode = (mode: LayoutMode) => {
+    const host = videoContainer.closest('#kreo-twitch-player-host') as HTMLElement;
+    if (!host) return;
+
+    host.classList.remove('layout-video-only', 'layout-chat-only');
+
+    if (mode === 'video-only') {
+      host.classList.add('layout-video-only');
+    } else if (mode === 'chat-only') {
+      host.classList.add('layout-chat-only');
+      // In chat-only mode, show stream info in chat header
+      const chatHeader = chatContainer.querySelector('.irc-chat-header');
+      if (chatHeader && !chatHeader.querySelector('.chat-only-info')) {
+        const info = document.createElement('span');
+        info.className = 'chat-only-info';
+        info.innerHTML = `<span class="live-indicator" style="margin-left:8px">LIVE</span>`;
+        chatHeader.appendChild(info);
+      }
+    } else {
+      // Remove chat-only info when returning to normal mode
+      const chatOnlyInfo = chatContainer.querySelector('.chat-only-info');
+      chatOnlyInfo?.remove();
+    }
+  };
+
+  const cycleLayoutMode = () => {
+    layoutModeIdx = (layoutModeIdx + 1) % LAYOUT_CYCLE.length;
+    setLayoutMode(LAYOUT_CYCLE[layoutModeIdx]);
+  };
+
   // === Keyboard Shortcuts ===
   const keydownHandler = (e: KeyboardEvent) => {
     const target = e.target as HTMLElement;
@@ -567,6 +602,11 @@ export function createCustomControls(
         // Forward 10s
         e.preventDefault();
         videoElement.currentTime += 10;
+        break;
+      case 'KeyC':
+        // Cycle: Video+Chat → Video-Only → Chat-Only
+        e.preventDefault();
+        cycleLayoutMode();
         break;
     }
   };

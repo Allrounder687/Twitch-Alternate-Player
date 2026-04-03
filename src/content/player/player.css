@@ -359,6 +359,32 @@ video {
   display: none !important;
 }
 
+/* Video-Only Mode */
+#kreo-twitch-player-host.layout-video-only .chat-container {
+  display: none !important;
+}
+
+#kreo-twitch-player-host.layout-video-only .video-container {
+  flex: 1;
+}
+
+/* Chat-Only Mode */
+#kreo-twitch-player-host.layout-chat-only .video-container {
+  display: none !important;
+}
+
+#kreo-twitch-player-host.layout-chat-only .chat-container {
+  width: 100% !important;
+  flex: 1;
+  display: flex !important;
+}
+
+.chat-only-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* Stats Overlay */
 .stats-overlay {
   position: absolute;
