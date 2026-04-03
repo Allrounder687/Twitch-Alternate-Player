@@ -1,0 +1,44 @@
+﻿node.exe : Browserslist: browsers data 
+(caniuse-lite) is 10 months old. Please 
+run:
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" 
+"C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecifi 
+   ed: (Browserslist: b...ld. Please ru  
+  n::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeComm 
+   andError
+ 
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https:/
+/github.com/browserslist/update-db#readme
+assets by status 5.07 KiB [1m[32m[cached][39m[22m 7 assets
+[1m./src/popup/index.tsx[39m[22m 39 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[1m./src/content/index.ts[39m[22m 39 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+[1m./src/background/index.ts[39m[22m 39 bytes [1m[33m[built][39m[22m [1m[33m[code generated][39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/background/index.ts[39m[22m
+[1mModule build [1m[31mfailed[39m[22m[1m (from ./node_modules/ts-loader/index.js):
+[1m[31mError[39m[22m[1m: TypeScript emitted no output for F:\Organized_Downloads\Projects\Kreo Projects\twitch-player-extension\src\background\index.ts.
+    at makeSourceMapAndFinish (F:\Organized_Downloads\Projects\Kreo Projects\twitch-player-extension\node_modules\ts-loader\dist\index.js:55:18)
+    at successLoader (F:\Organized_Downloads\Projects\Kreo Projects\twitch-player-extension\node_modules\ts-loader\dist\index.js:42:5)
+    at Object.loader (F:\Organized_Downloads\Projects\Kreo Projects\twitch-player-extension\node_modules\ts-loader\dist\index.js:23:5)[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/content/index.ts[39m[22m
+[1mModule build [1m[31mfailed[39m[22m[1m (from ./node_modules/ts-loader/index.js):
+[1m[31mError[39m[22m[1m: TypeScript emitted no output for F:\Organized_Downloads\Projects\Kreo Projects\twitch-player-extension\src\content\index.ts.
+    at makeSourceMapAndFinish (F:\Organized_Downloads\Projects\Kreo Projects\twitch-player-extension\node_modules\ts-loader\dist\index.js:55:18)
+    at successLoader (F:\Organized_Downloads\Projects\Kreo Projects\twitch-player-extension\node_modules\ts-loader\dist\index.js:42:5)
+    at Object.loader (F:\Organized_Downloads\Projects\Kreo Projects\twitch-player-extension\node_modules\ts-loader\dist\index.js:23:5)[39m[22m
+
+[1m[31mERROR[39m[22m in [1m./src/popup/index.tsx[39m[22m
+[1mModule build [1m[31mfailed[39m[22m[1m (from ./node_modules/ts-loader/index.js):
+[1m[31mError[39m[22m[1m: TypeScript emitted no output for F:\Organized_Downloads\Projects\Kreo Projects\twitch-player-extension\src\popup\index.tsx.
+    at makeSourceMapAndFinish (F:\Organized_Downloads\Projects\Kreo Projects\twitch-player-extension\node_modules\ts-loader\dist\index.js:55:18)
+    at successLoader (F:\Organized_Downloads\Projects\Kreo Projects\twitch-player-extension\node_modules\ts-loader\dist\index.js:42:5)
+    at Object.loader (F:\Organized_Downloads\Projects\Kreo Projects\twitch-player-extension\node_modules\ts-loader\dist\index.js:23:5)[39m[22m
+
+webpack 5.100.2 compiled with [1m[31m3 errors[39m[22m in 1837 ms

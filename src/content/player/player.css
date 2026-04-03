@@ -1,0 +1,199 @@
+/* Basic Minimalist Theme */
+:root {
+  --player-bg: #000;
+  --ui-bg: rgba(0, 0, 0, 0.7);
+  --accent-color: #9146FF;
+  --text-primary: #fff;
+  --text-secondary: #adadb8;
+}
+
+#kreo-twitch-player-host {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 2147483647;
+  display: flex;
+  background: var(--player-bg);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+#kreo-twitch-player-host.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.player-layout {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+}
+
+.video-container {
+  position: relative;
+  flex: 1;
+  background: #000;
+  overflow: hidden;
+}
+
+.chat-container {
+  width: 340px;
+  height: 100vh;
+  background: #18181b;
+  border-left: 1px solid #2d2d30;
+}
+
+video {
+  width: 100%;
+  height: 100%;
+}
+
+/* Common UI styles */
+.custom-ui {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  background: var(--ui-bg);
+  color: var(--text-primary);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  transition: opacity 0.2s;
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+.hide-ui .custom-ui {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Top Bar */
+.top-bar {
+  top: 0;
+  justify-content: space-between;
+}
+
+.stream-title {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* Bottom Bar */
+.controls-bar {
+  bottom: 0;
+  height: 48px;
+  justify-content: space-between;
+}
+
+.controls-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ctrl-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+}
+
+.ctrl-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.switch-default-btn {
+  opacity: 0.6;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.switch-default-btn:hover {
+  opacity: 1;
+}
+
+.ctrl-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Volume */
+.volume-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.volume-slider {
+  width: 60px;
+  cursor: pointer;
+}
+
+/* Loader */
+.loader {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255,255,255,0.1);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 0.8s infinite linear;
+  display: none;
+}
+
+.loader.active {
+  display: block;
+}
+
+@keyframes spin {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Simplified Settings */
+.settings-modal {
+  position: absolute;
+  bottom: 56px;
+  right: 16px;
+  background: #18181b;
+  border: 1px solid #333;
+  padding: 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  width: 180px;
+}
+
+.settings-modal.hidden {
+  display: none;
+}
+
+.setting-item {
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.setting-item:last-child {
+  margin-bottom: 0;
+}
+
+select {
+  background: #222;
+  color: white;
+  border: 1px solid #444;
+  font-size: 12px;
+}
+
