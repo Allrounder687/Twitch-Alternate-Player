@@ -28,10 +28,20 @@ export function attachVideo(
   const initStream = async () => {
     try {
       // 1. Request Stream URL from Background Script
+      if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.id) {
+        throw new Error('Extension context invalidated');
+      }
+
       const response: { url?: string, error?: string } = await new Promise((resolve) => {
         chrome.runtime.sendMessage(
           { action: 'GET_STREAM_URL', streamerName },
-          (res) => resolve(res || { error: 'No response from background script' })
+          (res) => {
+            if (chrome.runtime.lastError) {
+              resolve({ error: chrome.runtime.lastError.message });
+            } else {
+              resolve(res || { error: 'No response from background script' });
+            }
+          }
         );
       });
 
@@ -87,7 +97,11 @@ export function attachVideo(
         hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
           if (!isDestroyed) {
             hideLoader();
-            videoElement.play().catch(e => console.error("Auto-play prevented", e));
+            videoElement.play().catch(() => {
+              // Fail-safe: try to play muted if autoplay is blocked
+              videoElement.muted = true;
+              videoElement.play().catch(e => console.warn("[Alt Player] Autoplay still failed even when muted:", e));
+            });
           }
         });
 
@@ -115,7 +129,10 @@ export function attachVideo(
         videoElement.src = mediaSourceUrl;
         videoElement.addEventListener('loadedmetadata', () => {
           hideLoader();
-          videoElement.play().catch(e => console.error("Auto-play prevented", e));
+          videoElement.play().catch(() => {
+            videoElement.muted = true;
+            videoElement.play().catch(e => console.warn("[Alt Player] Autoplay fallback failed:", e));
+          });
         });
       } else {
         showError('Your browser does not support HLS stream playback.');

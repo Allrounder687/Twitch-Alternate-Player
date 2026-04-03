@@ -12,9 +12,16 @@ function getStreamerNameFromUrl(): string | null {
 
 let currentStreamer: string | null = null;
 let playerEnabled = false;
+function isContextValid() {
+  return typeof chrome !== 'undefined' && !!chrome.runtime && !!chrome.runtime.id;
+}
 
 const checkAndMount = () => {
+  if (!isContextValid()) return;
+  
   chrome.storage.sync.get(['isEnabled', 'volume', 'quality'], (data) => {
+    if (chrome.runtime.lastError) return;
+    
     playerEnabled = !!data.isEnabled;
     const streamerName = getStreamerNameFromUrl();
     
@@ -31,14 +38,17 @@ const checkAndMount = () => {
 };
 
 // Listen for messages from the popup (e.g. toggling the player)
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'TOGGLE_PLAYER') {
-    checkAndMount();
-  }
-  return true;
-});
+if (isContextValid()) {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === 'TOGGLE_PLAYER') {
+      checkAndMount();
+    }
+    return true;
+  });
+}
 
 function injectPlayerButton() {
+  if (!isContextValid()) return;
   // Only inject if we are on a stream page
   const streamerName = getStreamerNameFromUrl();
   if (!streamerName) return;
@@ -84,6 +94,8 @@ function injectPlayerButton() {
   btn.onclick = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!isContextValid()) return;
+    
     chrome.storage.sync.get(['isEnabled'], (data) => {
       const toggleState = !data.isEnabled;
       chrome.storage.sync.set({ isEnabled: toggleState }, () => {
@@ -96,13 +108,23 @@ function injectPlayerButton() {
 }
 
 // Twitch is an SPA, so we periodically check if the URL changed to a new streamer
-setInterval(() => {
+const mainInterval = setInterval(() => {
+  if (!isContextValid()) {
+    clearInterval(mainInterval);
+    return;
+  }
   checkAndMount();
   injectPlayerButton();
 }, 2000);
 
 // Injection loop for the button (Twitch DOM constantly destroys/recreates controls)
-setInterval(injectPlayerButton, 1000);
+const slowInterval = setInterval(() => {
+  if (!isContextValid()) {
+    clearInterval(slowInterval);
+    return;
+  }
+  injectPlayerButton();
+}, 1000);
 
 // Initial check
 checkAndMount();
