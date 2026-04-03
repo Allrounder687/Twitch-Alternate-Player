@@ -1,4 +1,4 @@
-/* Basic Minimalist Theme */
+/* Twitch Alternate Player — Dark Theme */
 :root {
   --player-bg: #000;
   --ui-bg: rgba(0, 0, 0, 0.7);
@@ -7,6 +7,7 @@
   --text-secondary: #adadb8;
 }
 
+/* ===== Main Player Host ===== */
 #kreo-twitch-player-host {
   position: absolute;
   top: 0;
@@ -27,6 +28,7 @@
   visibility: visible;
 }
 
+/* ===== Video Container ===== */
 .video-container {
   position: relative;
   flex: 1;
@@ -35,6 +37,12 @@
   overflow: hidden;
 }
 
+video {
+  width: 100%;
+  height: 100%;
+}
+
+/* ===== Chat Container ===== */
 .chat-container {
   position: relative;
   width: 340px;
@@ -42,18 +50,74 @@
   background: #09090b;
   border-left: 1px solid #2d2d30;
   z-index: 20;
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-container.hidden {
   display: none;
 }
 
-video {
-  width: 100%;
+/* ===== IRC Chat Panel ===== */
+.irc-chat-panel {
+  display: flex;
+  flex-direction: column;
   height: 100%;
+  width: 100%;
 }
 
-/* Common UI styles */
+.irc-chat-header {
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid #2d2d30;
+  background: #0e0e10;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.irc-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+.irc-chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.irc-chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.irc-chat-msg {
+  padding: 3px 0;
+  word-wrap: break-word;
+  color: #d3d3d3;
+}
+
+.irc-chat-name {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.irc-chat-text {
+  font-size: 13px;
+}
+
+.irc-chat-emote {
+  height: 24px;
+  vertical-align: middle;
+  margin: 0 2px;
+}
+
+/* ===== Controls Bar ===== */
 .custom-ui {
   position: absolute;
   left: 0;
@@ -73,7 +137,6 @@ video {
   pointer-events: none;
 }
 
-/* Bottom Bar */
 .controls-bar {
   bottom: 0;
   height: 48px;
@@ -83,7 +146,7 @@ video {
 .controls-section {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .ctrl-btn {
@@ -95,10 +158,21 @@ video {
   display: flex;
   align-items: center;
   border-radius: 4px;
+  transition: background 0.15s;
 }
 
 .ctrl-btn:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+.ctrl-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.ctrl-btn.active-toggle {
+  color: var(--accent-color);
+  background: rgba(145, 70, 255, 0.15);
 }
 
 .switch-default-btn {
@@ -112,12 +186,7 @@ video {
   opacity: 1;
 }
 
-.ctrl-btn svg {
-  width: 20px;
-  height: 20px;
-}
-
-/* Volume */
+/* ===== Volume ===== */
 .volume-container {
   display: flex;
   align-items: center;
@@ -129,7 +198,7 @@ video {
   cursor: pointer;
 }
 
-/* Loader */
+/* ===== Loader ===== */
 .loader {
   position: absolute;
   top: 50%;
@@ -154,7 +223,25 @@ video {
   }
 }
 
-/* Premium Settings Menu */
+/* ===== Error Message ===== */
+.error-msg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #ef4444;
+  font-size: 14px;
+  text-align: center;
+  padding: 16px;
+  max-width: 80%;
+  display: none;
+}
+
+.error-msg.active {
+  display: block;
+}
+
+/* ===== Settings Modal ===== */
 .settings-modal {
   position: absolute;
   bottom: 60px;
@@ -165,7 +252,7 @@ video {
   padding: 8px 0;
   border-radius: 8px;
   font-size: 13px;
-  width: 200px;
+  width: 220px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   transform: translateY(10px);
   opacity: 0;
@@ -213,11 +300,50 @@ video {
 }
 
 .quality-option.selected::after {
-  content: '●';
-  font-size: 8px;
+  content: '\2713';
+  font-size: 12px;
+  margin-left: 8px;
 }
 
-/* Sticky Mini-Player Mode */
+.quality-bitrate {
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+/* ===== Stats Overlay ===== */
+.stats-overlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--text-primary);
+  z-index: 50;
+  min-width: 200px;
+  font-family: 'SF Mono', 'Consolas', monospace;
+}
+
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+  gap: 16px;
+}
+
+.stats-row span:first-child {
+  color: var(--text-secondary);
+}
+
+.stats-row span:last-child {
+  font-weight: 600;
+}
+
+/* ===== Sticky Mini-Player Mode ===== */
 #kreo-twitch-player-host.mini-mode {
   position: fixed !important;
   bottom: 24px !important;
@@ -237,7 +363,6 @@ video {
 
 #kreo-twitch-player-host.mini-mode .chat-container {
   display: none !important;
-  /* Hide chat in mini mode for space */
 }
 
 #kreo-twitch-player-host.mini-mode .controls-section:first-child {
@@ -248,7 +373,11 @@ video {
 #kreo-twitch-player-host.mini-mode .settings-btn,
 #kreo-twitch-player-host.mini-mode .chat-toggle-btn,
 #kreo-twitch-player-host.mini-mode .pip-btn,
-#kreo-twitch-player-host.mini-mode .theater-btn {
+#kreo-twitch-player-host.mini-mode .theater-btn,
+#kreo-twitch-player-host.mini-mode .clip-btn,
+#kreo-twitch-player-host.mini-mode .stats-btn,
+#kreo-twitch-player-host.mini-mode .audio-only-btn,
+#kreo-twitch-player-host.mini-mode .low-latency-btn {
   display: none !important;
 }
 
@@ -262,7 +391,6 @@ video {
     transform: scale(0.8);
     opacity: 0;
   }
-
   to {
     transform: scale(1);
     opacity: 1;
@@ -291,4 +419,30 @@ video {
 
 #kreo-twitch-player-host.mini-mode:hover .mini-close-btn {
   opacity: 1;
+}
+
+/* ===== Theater Mode ===== */
+body.alt-player-theater .side-nav,
+body.alt-player-theater .side-bar-contents,
+body.alt-player-theater .channel-info-content,
+body.alt-player-theater [data-a-target="side-nav-bar"],
+body.alt-player-theater .side-nav-section {
+  display: none !important;
+}
+
+body.alt-player-theater .twilight-main,
+body.alt-player-theater [data-a-target="page-main-content-wrapper"],
+body.alt-player-theater main {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+#kreo-twitch-player-host.theater-mode {
+  position: fixed !important;
+  top: 50px !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: calc(100vh - 50px) !important;
+  z-index: 5000 !important;
+  border-radius: 0;
 }

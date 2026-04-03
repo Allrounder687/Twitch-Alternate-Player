@@ -1,10 +1,12 @@
-console.log('[Twitch Player] Content script loading...');
 import { playerInstance } from './player/PlayerContainer';
 
 function getStreamerNameFromUrl(): string | null {
   const path = window.location.pathname.split('/');
-  // Filter out non-streamer paths
-  if (path.length >= 2 && path[1] !== '' && !['directory', 'p', 'search', 'videos', 'u', 'settings', 'subscriptions'].includes(path[1])) {
+  const nonStreamerPaths = [
+    'directory', 'p', 'search', 'videos', 'u', 'settings',
+    'subscriptions', 'inventory', 'wallet', 'drops', 'friends',
+  ];
+  if (path.length >= 2 && path[1] !== '' && !nonStreamerPaths.includes(path[1])) {
     return path[1];
   }
   return null;
@@ -19,6 +21,31 @@ function isContextValid() {
   return typeof chrome !== 'undefined' && !!chrome.runtime && !!chrome.runtime.id;
 }
 
+/**
+ * Send a message with retry logic for MV3 service worker lifecycle.
+ * The background service worker may be asleep when we try to send.
+ */
+function sendMessageSafe(msg: any, maxRetries = 3): void {
+  if (!isContextValid()) return;
+
+  let attempt = 0;
+  const tryOnce = () => {
+    try {
+      chrome.runtime.sendMessage(msg, () => {
+        if (chrome.runtime.lastError) {
+          attempt++;
+          if (attempt < maxRetries) {
+            setTimeout(tryOnce, 300 * attempt);
+          }
+        }
+      });
+    } catch {
+      // Extension context invalidated
+    }
+  };
+  tryOnce();
+}
+
 // Initial storage load
 if (isContextValid()) {
   chrome.storage.sync.get(['isEnabled', 'volume', 'quality'], (data) => {
@@ -29,7 +56,7 @@ if (isContextValid()) {
     checkAndMount();
   });
 
-  // Listen for storage changes instead of polling every 2s
+  // Listen for storage changes
   chrome.storage.sync.onChanged.addListener((changes) => {
     if (changes.isEnabled) playerEnabled = changes.isEnabled.newValue;
     if (changes.volume) currentVolume = changes.volume.newValue;
@@ -40,7 +67,7 @@ if (isContextValid()) {
 
 const checkAndMount = () => {
   const streamerName = getStreamerNameFromUrl();
-  
+
   if (playerEnabled && streamerName) {
     if (currentStreamer !== streamerName) {
       currentStreamer = streamerName;
@@ -51,19 +78,20 @@ const checkAndMount = () => {
     playerInstance.unmount();
   }
 
-  // Pre-fetch if we are on a new streamer but player is disabled
+  // Pre-fetch if on a new streamer page but player is disabled
   if (streamerName && !playerEnabled && streamerName !== currentStreamer) {
-    chrome.runtime.sendMessage({ action: 'PREFETCH_STREAM', streamerName });
+    sendMessageSafe({ action: 'PREFETCH_STREAM', streamerName });
   }
 };
 
-// Listen for messages from the popup (e.g. toggling the player)
+// Listen for messages from the popup
 if (isContextValid()) {
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.action === 'TOGGLE_PLAYER') {
       checkAndMount();
     }
-    return true;
+    sendResponse({ ok: true });
+    return false;
   });
 }
 
@@ -72,51 +100,47 @@ function injectPlayerButton() {
   const streamerName = getStreamerNameFromUrl();
   if (!streamerName) return;
 
-  const controlGroup = 
-    document.querySelector('[data-a-target="player-controls-right"]') || 
+  const controlGroup =
+    document.querySelector('[data-a-target="player-controls-right"]') ||
     document.querySelector('.player-controls__right-control-group') ||
     document.querySelector('[data-test-selector="right-control-group"]');
 
   if (!controlGroup) return;
 
-  const btn = (document.getElementById('kreo-alt-player-btn') as HTMLButtonElement) || document.createElement('button');
+  const btn =
+    (document.getElementById('kreo-alt-player-btn') as HTMLButtonElement) ||
+    document.createElement('button');
   if (!btn.id) {
     btn.id = 'kreo-alt-player-btn';
     controlGroup.insertBefore(btn, controlGroup.firstChild);
   }
 
-  const applyStyles = () => {
-    btn.style.setProperty('background-color', 'transparent', 'important');
-    btn.style.color = 'white';
-    btn.style.borderRadius = '4px';
-    btn.style.fontWeight = '600';
-    btn.style.fontSize = '12px';
-    btn.style.padding = '0 8px';
-    btn.style.height = '30px';
-    btn.style.margin = '0 4px';
-    btn.style.display = 'flex';
-    btn.style.alignItems = 'center';
-    btn.style.justifyContent = 'center';
-    btn.style.cursor = 'pointer';
-    btn.style.border = 'none';
-    btn.style.transition = 'background-color 0.2s';
-    btn.style.fontFamily = 'inherit';
-    btn.innerText = playerEnabled ? 'Use Default Player' : 'Alt Player';
-  };
+  btn.style.setProperty('background-color', 'transparent', 'important');
+  btn.style.color = 'white';
+  btn.style.borderRadius = '4px';
+  btn.style.fontWeight = '600';
+  btn.style.fontSize = '12px';
+  btn.style.padding = '0 8px';
+  btn.style.height = '30px';
+  btn.style.margin = '0 4px';
+  btn.style.display = 'flex';
+  btn.style.alignItems = 'center';
+  btn.style.justifyContent = 'center';
+  btn.style.cursor = 'pointer';
+  btn.style.border = 'none';
+  btn.style.transition = 'background-color 0.2s';
+  btn.style.fontFamily = 'inherit';
+  btn.innerText = playerEnabled ? 'Use Default Player' : 'Alt Player';
 
-  applyStyles();
-
-  btn.onmouseover = () => btn.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
-  btn.onmouseout = () => btn.style.backgroundColor = 'transparent';
+  btn.onmouseover = () => (btn.style.backgroundColor = 'rgba(255, 255, 255, 0.15)');
+  btn.onmouseout = () => (btn.style.backgroundColor = 'transparent');
 
   btn.onclick = (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (!isContextValid()) return;
-    
     const toggleState = !playerEnabled;
     chrome.storage.sync.set({ isEnabled: toggleState });
-    // Local state will be updated by the listener
   };
 }
 

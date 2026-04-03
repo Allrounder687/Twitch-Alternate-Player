@@ -65,6 +65,12 @@ h1 {
   gap: 8px;
 }
 
+.form-group.toggle-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
 label {
   font-size: 0.85rem;
   font-weight: 500;
@@ -116,7 +122,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 .status {
-  margin-top: 24px;
+  margin-top: 16px;
   text-align: center;
   font-size: 0.85rem;
   font-weight: 500;
@@ -138,6 +144,12 @@ input[type="range"]::-webkit-slider-thumb:hover {
   display: inline-block;
   width: 44px;
   height: 24px;
+  flex-shrink: 0;
+}
+
+.switch.small {
+  width: 36px;
+  height: 20px;
 }
 
 .switch input {
@@ -166,6 +178,11 @@ input[type="range"]::-webkit-slider-thumb:hover {
   transition: .3s;
 }
 
+.switch.small .slider:before {
+  height: 14px;
+  width: 14px;
+}
+
 input:checked + .slider {
   background-color: var(--accent);
   border-color: var(--accent);
@@ -175,10 +192,51 @@ input:checked + .slider:before {
   transform: translateX(20px);
 }
 
+.switch.small input:checked + .slider:before {
+  transform: translateX(16px);
+}
+
 .slider.round {
   border-radius: 24px;
 }
 
 .slider.round:before {
   border-radius: 50%;
+}
+
+/* Keyboard shortcuts info */
+.shortcuts-info {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--glass-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.shortcuts-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  font-size: 0.8rem;
+}
+
+.shortcut-grid span:nth-child(odd) {
+  color: var(--accent);
+  font-weight: 600;
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 0.75rem;
+}
+
+.shortcut-grid span:nth-child(even) {
+  color: var(--text-muted);
 }
