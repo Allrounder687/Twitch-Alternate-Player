@@ -281,13 +281,3 @@ video {
 #kreo-twitch-player-host.mini-mode:hover .mini-close-btn {
   opacity: 1;
 }
-
-/* Theater Mode */
-#kreo-twitch-player-host.theater-mode {
-  position: fixed !important;
-  top: 50px !important; /* Twitch Top Nav */
-  left: 0 !important;
-  width: 100vw !important;
-  height: calc(100vh - 50px) !important;
-  z-index: 9999 !important;
-}

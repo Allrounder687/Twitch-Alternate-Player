@@ -102,7 +102,7 @@ export class PlayerContainer {
     this.observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         // If the main player area is mostly out of view, go mini
-        if (entry.intersectionRatio < 0.1 && entry.boundingClientRect.top < 0) {
+        if (entry.intersectionRatio < 0.1) {
            this.container?.classList.add('mini-mode');
         } else if (entry.intersectionRatio > 0.5) {
            this.container?.classList.remove('mini-mode');

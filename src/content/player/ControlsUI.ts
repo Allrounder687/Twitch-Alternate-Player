@@ -215,9 +215,12 @@ export function createCustomControls(
   // Theater Mode
   const theaterBtn = controlsBar.querySelector('.theater-btn') as HTMLButtonElement;
   theaterBtn.addEventListener('click', () => {
-    const host = document.getElementById('kreo-twitch-player-host');
-    if (host) {
-      host.classList.toggle('theater-mode');
+    // Proxy the click to Twitch's native theater mode button for robust layout integration
+    const nativeBtn = document.querySelector('[data-a-target="player-theatre-mode-button"]') as HTMLButtonElement;
+    if (nativeBtn) {
+      nativeBtn.click();
+    } else {
+      console.warn('[Alt Player] Native theater mode button not found');
     }
   });
 
