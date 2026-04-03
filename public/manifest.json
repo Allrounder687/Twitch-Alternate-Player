@@ -49,7 +49,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["inject.js"],
+      "resources": ["inject.js", "popout.html"],
       "matches": ["*://*.twitch.tv/*"]
     }
   ]

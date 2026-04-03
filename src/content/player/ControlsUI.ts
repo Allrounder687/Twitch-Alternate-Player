@@ -44,6 +44,9 @@ export function createCustomControls(
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
       </button>
       <button class="ctrl-btn settings-btn" title="Quality">Quality</button>
+      <button class="ctrl-btn popout-btn" title="Pop-Out Player">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </button>
       <button class="ctrl-btn pip-btn" title="Picture-in-Picture">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="12" y="9" width="8" height="6" rx="1" fill="currentColor" opacity="0.4"/></svg>
       </button>
@@ -253,6 +256,7 @@ export function createCustomControls(
   const clipBtn = controlsBar.querySelector('.clip-btn') as HTMLButtonElement;
   const statsBtn = controlsBar.querySelector('.stats-btn') as HTMLButtonElement;
   const audioOnlyBtn = controlsBar.querySelector('.audio-only-btn') as HTMLButtonElement;
+  const popoutBtn = controlsBar.querySelector('.popout-btn') as HTMLButtonElement;
 
   // === Switch to default player ===
   switchDefaultBtn.addEventListener('click', () => {
@@ -361,6 +365,16 @@ export function createCustomControls(
     } catch (e: any) {
       console.error('[Alt Player] PiP failed:', e?.message || String(e));
     }
+  });
+
+  // === Pop-Out Player ===
+  popoutBtn.addEventListener('click', () => {
+    const streamUrl = videoController.getStreamUrl?.() || '';
+    if (!streamUrl) return;
+    const popoutUrl = chrome.runtime.getURL(
+      `popout.html?url=${encodeURIComponent(streamUrl)}&channel=${encodeURIComponent(streamerName)}`
+    );
+    window.open(popoutUrl, '_blank', 'width=640,height=360,menubar=no,toolbar=no,location=no,status=no');
   });
 
   // === Theater Mode ===

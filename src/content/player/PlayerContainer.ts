@@ -18,6 +18,7 @@ export class PlayerContainer {
   private channelPointsClaimer: ChannelPointsClaimer | null = null;
   private toastManager: ToastManager | null = null;
   private toastHandler: ((e: Event) => void) | null = null;
+  private dragCleanup: (() => void) | null = null;
 
   public mount(streamerName: string, volume: number = 50, quality: string = 'auto') {
     if (this.container) {
@@ -82,6 +83,10 @@ export class PlayerContainer {
       }
     });
 
+    // Mini drag handle (title bar area)
+    const miniDragBar = document.createElement('div');
+    miniDragBar.className = 'mini-drag-bar';
+
     // Mini Close Button
     const miniClose = document.createElement('button');
     miniClose.className = 'mini-close-btn';
@@ -91,10 +96,19 @@ export class PlayerContainer {
       this.container?.classList.remove('mini-mode');
     };
 
+    // Mini resize handle
+    const miniResize = document.createElement('div');
+    miniResize.className = 'mini-resize-handle';
+
     this.container.appendChild(videoContainer);
     this.container.appendChild(chatContainer);
+    this.container.appendChild(miniDragBar);
     this.container.appendChild(miniClose);
+    this.container.appendChild(miniResize);
     target.appendChild(this.container);
+
+    // Setup mini-player drag & resize
+    this.setupMiniDragResize(miniDragBar, miniResize);
 
     // Attach HLS logic (returns controller)
     this.videoController = attachVideo(video, streamerName, loader, errorMsg);
@@ -156,6 +170,114 @@ export class PlayerContainer {
     this.startBaseVideoKiller();
   }
 
+  private setupMiniDragResize(dragBar: HTMLElement, resizeHandle: HTMLElement) {
+    if (!this.container) return;
+    const host = this.container;
+
+    // Load persisted position/size
+    chrome.storage.sync.get(['miniPlayerPos'], (data) => {
+      if (data.miniPlayerPos) {
+        const { x, y, w, h } = data.miniPlayerPos;
+        host.style.setProperty('--mini-x', `${x}px`);
+        host.style.setProperty('--mini-y', `${y}px`);
+        if (w) host.style.setProperty('--mini-w', `${w}px`);
+        if (h) host.style.setProperty('--mini-h', `${h}px`);
+      }
+    });
+
+    // Drag
+    let isDragging = false;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+
+    const onDragStart = (e: MouseEvent) => {
+      if (!host.classList.contains('mini-mode')) return;
+      isDragging = true;
+      dragOffsetX = e.clientX - host.getBoundingClientRect().left;
+      dragOffsetY = e.clientY - host.getBoundingClientRect().top;
+      e.preventDefault();
+    };
+
+    const onDragMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      const x = e.clientX - dragOffsetX;
+      const y = e.clientY - dragOffsetY;
+      host.style.setProperty('--mini-x', `${x}px`);
+      host.style.setProperty('--mini-y', `${y}px`);
+      host.classList.add('mini-dragged');
+    };
+
+    const onDragEnd = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      // Persist position
+      const rect = host.getBoundingClientRect();
+      chrome.storage.sync.set({
+        miniPlayerPos: {
+          x: rect.left,
+          y: rect.top,
+          w: rect.width,
+          h: rect.height,
+        },
+      });
+    };
+
+    // Resize
+    let isResizing = false;
+    let resizeStartX = 0;
+    let resizeStartY = 0;
+    let startW = 0;
+    let startH = 0;
+
+    const onResizeStart = (e: MouseEvent) => {
+      if (!host.classList.contains('mini-mode')) return;
+      isResizing = true;
+      resizeStartX = e.clientX;
+      resizeStartY = e.clientY;
+      const rect = host.getBoundingClientRect();
+      startW = rect.width;
+      startH = rect.height;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const onResizeMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      // Resize from top-left corner (mini-player is anchored bottom-right by default)
+      const dw = resizeStartX - e.clientX;
+      const dh = resizeStartY - e.clientY;
+      const newW = Math.max(280, startW + dw);
+      const newH = Math.max(158, startH + dh);
+      host.style.setProperty('--mini-w', `${newW}px`);
+      host.style.setProperty('--mini-h', `${newH}px`);
+      host.classList.add('mini-dragged');
+    };
+
+    const onResizeEnd = () => {
+      if (!isResizing) return;
+      isResizing = false;
+      const rect = host.getBoundingClientRect();
+      chrome.storage.sync.set({
+        miniPlayerPos: {
+          x: rect.left,
+          y: rect.top,
+          w: rect.width,
+          h: rect.height,
+        },
+      });
+    };
+
+    dragBar.addEventListener('mousedown', onDragStart);
+    resizeHandle.addEventListener('mousedown', onResizeStart);
+    window.addEventListener('mousemove', (e) => { onDragMove(e); onResizeMove(e); });
+    window.addEventListener('mouseup', () => { onDragEnd(); onResizeEnd(); });
+
+    this.dragCleanup = () => {
+      dragBar.removeEventListener('mousedown', onDragStart);
+      resizeHandle.removeEventListener('mousedown', onResizeStart);
+    };
+  }
+
   private startBaseVideoKiller() {
     this.baseVideoInterval = window.setInterval(() => {
       const allVideos = document.querySelectorAll('video');
@@ -180,6 +302,11 @@ export class PlayerContainer {
     if (this.observer) {
       this.observer.disconnect();
       this.observer = null;
+    }
+
+    if (this.dragCleanup) {
+      this.dragCleanup();
+      this.dragCleanup = null;
     }
 
     if (this.toastManager) {

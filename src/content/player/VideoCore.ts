@@ -33,6 +33,7 @@ export function attachVideo(
   let isDestroyed = false;
   let watchdogInterval: number | null = null;
   let recoveryAttempts = 0;
+  let currentStreamUrl = '';
 
   // Clip recording state
   let mediaRecorder: MediaRecorder | null = null;
@@ -174,6 +175,7 @@ export function attachVideo(
       if (isDestroyed) return;
 
       const mediaSourceUrl = response.url;
+      currentStreamUrl = mediaSourceUrl;
 
       // Load latency mode preference
       const settings = await new Promise<Record<string, any>>((resolve) => {
@@ -456,6 +458,8 @@ export function attachVideo(
 
     isRecording: () => mediaRecorder !== null && mediaRecorder.state === 'recording',
 
+    getStreamUrl: () => currentStreamUrl,
+
     setLatencyMode: (mode: string) => {
       if (!hlsInstance) return;
       const config = getLatencyConfig(mode);
@@ -536,5 +540,6 @@ export interface VideoController {
   stopClip: () => void;
   isRecording: () => boolean;
   setLatencyMode: (mode: string) => void;
+  getStreamUrl: () => string;
   cleanup: () => void;
 }

@@ -490,8 +490,8 @@ video {
   right: 24px !important;
   top: auto !important;
   left: auto !important;
-  width: 384px !important;
-  height: 216px !important;
+  width: var(--mini-w, 384px) !important;
+  height: var(--mini-h, 216px) !important;
   z-index: 10000 !important;
   border-radius: 12px;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
@@ -499,6 +499,14 @@ video {
   overflow: hidden;
   animation: mini-slide-in 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   transform-origin: bottom right;
+}
+
+/* When dragged, use absolute positioning instead of anchored bottom-right */
+#kreo-twitch-player-host.mini-mode.mini-dragged {
+  bottom: auto !important;
+  right: auto !important;
+  top: var(--mini-y, auto) !important;
+  left: var(--mini-x, auto) !important;
 }
 
 #kreo-twitch-player-host.mini-mode .chat-container {
@@ -513,11 +521,13 @@ video {
 #kreo-twitch-player-host.mini-mode .settings-btn,
 #kreo-twitch-player-host.mini-mode .chat-toggle-btn,
 #kreo-twitch-player-host.mini-mode .pip-btn,
+#kreo-twitch-player-host.mini-mode .popout-btn,
 #kreo-twitch-player-host.mini-mode .theater-btn,
 #kreo-twitch-player-host.mini-mode .clip-btn,
 #kreo-twitch-player-host.mini-mode .stats-btn,
 #kreo-twitch-player-host.mini-mode .audio-only-btn,
-#kreo-twitch-player-host.mini-mode .switch-default-btn {
+#kreo-twitch-player-host.mini-mode .switch-default-btn,
+#kreo-twitch-player-host.mini-mode .layout-btn {
   display: none !important;
 }
 
@@ -563,6 +573,58 @@ video {
 
 #kreo-twitch-player-host.mini-mode:hover .mini-close-btn {
   opacity: 1;
+}
+
+/* Mini-player drag bar */
+.mini-drag-bar {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  cursor: grab;
+  z-index: 10002;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), transparent);
+}
+
+.mini-drag-bar:active {
+  cursor: grabbing;
+}
+
+#kreo-twitch-player-host.mini-mode .mini-drag-bar {
+  display: block;
+}
+
+/* Mini-player resize handle */
+.mini-resize-handle {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nw-resize;
+  z-index: 10002;
+}
+
+.mini-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 8px;
+  height: 8px;
+  border-top: 2px solid rgba(255, 255, 255, 0.4);
+  border-left: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+#kreo-twitch-player-host.mini-mode .mini-resize-handle {
+  display: block;
+}
+
+#kreo-twitch-player-host.mini-mode:hover .mini-resize-handle::after {
+  border-color: rgba(255, 255, 255, 0.7);
 }
 
 /* Fullscreen: host is the fullscreen element so chat sidebar is included */

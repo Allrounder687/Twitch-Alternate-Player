@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Twitch Alt Player — Pop-Out</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+    video { width: 100%; height: 100%; display: block; }
+    .loader {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 40px; height: 40px;
+      border: 4px solid rgba(255,255,255,0.1);
+      border-top-color: #9146FF;
+      border-radius: 50%;
+      animation: spin 0.8s infinite linear;
+    }
+    .loader.hidden { display: none; }
+    .error {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      color: #ef4444; font-family: system-ui, sans-serif; font-size: 14px;
+      text-align: center; display: none;
+    }
+    .error.active { display: block; }
+    @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <video id="video" autoplay></video>
+  <div class="loader" id="loader"></div>
+  <div class="error" id="error"></div>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const streamUrl = params.get('url');
+    const channel = params.get('channel') || 'Stream';
+    document.title = `${channel} — Pop-Out Player`;
+
+    const video = document.getElementById('video');
+    const loader = document.getElementById('loader');
+    const error = document.getElementById('error');
+
+    if (!streamUrl) {
+      loader.classList.add('hidden');
+      error.textContent = 'No stream URL provided.';
+      error.classList.add('active');
+    } else if (Hls.isSupported()) {
+      const hls = new Hls({
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 8,
+        lowLatencyMode: true,
+        maxLiveSyncPlaybackRate: 1.2,
+        backBufferLength: 30,
+      });
+      hls.loadSource(streamUrl);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, function(_event, data) {
+        loader.classList.add('hidden');
+        // Start at highest quality
+        let highest = -1, maxH = 0;
+        data.levels.forEach(function(l, i) {
+          if (l.height > maxH) { maxH = l.height; highest = i; }
+        });
+        if (highest !== -1) {
+          hls.startLevel = highest;
+          hls.nextLoadLevel = highest;
+        }
+        video.play().catch(function() {
+          video.muted = true;
+          video.play().catch(function() {});
+        });
+      });
+      hls.on(Hls.Events.ERROR, function(_event, data) {
+        if (data.fatal) {
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            hls.startLoad();
+          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            hls.recoverMediaError();
+          } else {
+            loader.classList.add('hidden');
+            error.textContent = 'Stream failed to load.';
+            error.classList.add('active');
+          }
+        }
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = streamUrl;
+      video.addEventListener('loadedmetadata', function() {
+        loader.classList.add('hidden');
+        video.play().catch(function() {});
+      });
+    } else {
+      loader.classList.add('hidden');
+      error.textContent = 'HLS not supported in this browser.';
+      error.classList.add('active');
+    }
+  </script>
+</body>
+</html>
