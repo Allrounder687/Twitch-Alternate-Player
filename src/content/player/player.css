@@ -378,11 +378,39 @@ video {
 }
 
 .irc-chat-msg {
-  padding: 3px 0;
+  padding: 3px 4px;
   line-height: 1.4;
   font-size: 13px;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  border-left: 2px solid transparent;
+  border-radius: 2px;
+}
+
+/* Mention highlighting */
+.irc-chat-msg-mention {
+  background: rgba(218, 165, 32, 0.15);
+  border-left-color: #daa520;
+}
+
+/* Broadcaster message */
+.irc-chat-msg-broadcaster {
+  background: rgba(233, 25, 22, 0.08);
+  border-left-color: #e91916;
+}
+
+/* Moderator message */
+.irc-chat-msg-moderator {
+  background: rgba(0, 173, 3, 0.08);
+  border-left-color: #00ad03;
+}
+
+/* Inline mention highlight */
+.irc-mention-highlight {
+  background: rgba(218, 165, 32, 0.3);
+  border-radius: 2px;
+  padding: 0 2px;
+  font-weight: 600;
 }
 
 .irc-chat-username {
