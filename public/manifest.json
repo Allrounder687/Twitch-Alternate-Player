@@ -7,7 +7,8 @@
     "storage",
     "tabs",
     "activeTab",
-    "scripting"
+    "scripting",
+    "identity"
   ],
   "host_permissions": [
     "*://*.twitch.tv/*",
@@ -21,7 +22,8 @@
     "https://api.frankerfacez.com/*",
     "https://7tv.io/*",
     "https://cdn.7tv.app/*",
-    "wss://irc-ws.chat.twitch.tv/*"
+    "wss://irc-ws.chat.twitch.tv/*",
+    "https://id.twitch.tv/*"
   ],
   "background": {
     "service_worker": "background.js",

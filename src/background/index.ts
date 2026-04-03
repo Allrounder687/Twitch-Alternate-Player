@@ -95,6 +95,7 @@ chrome.runtime.onInstalled.addListener((details) => {
       showAdNotifications: true,
       layout: 'balanced',
       theme: { preset: 'twitch-dark', custom: {} },
+      multiStreams: [],
     });
 
     chrome.tabs.create({ url: 'popup.html' });

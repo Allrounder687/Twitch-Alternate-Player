@@ -5,6 +5,10 @@ import { TwitchChat } from './TwitchChat';
 import { ChannelPointsClaimer } from './ChannelPointsClaimer';
 import { ToastManager } from './ToastManager';
 import { ThemeManager } from './ThemeManager';
+import { TwitchFeatures } from './TwitchFeatures';
+import { MultiStreamManager } from './MultiStreamManager';
+import { PublicAPI } from './PublicAPI';
+import { ModTools } from './ModTools';
 
 export class PlayerContainer {
   private container: HTMLDivElement | null = null;
@@ -21,6 +25,10 @@ export class PlayerContainer {
   private toastHandler: ((e: Event) => void) | null = null;
   private dragCleanup: (() => void) | null = null;
   private themeManager: ThemeManager | null = null;
+  private twitchFeatures: TwitchFeatures | null = null;
+  private multiStreamManager: MultiStreamManager | null = null;
+  private publicAPI: PublicAPI | null = null;
+  private modTools: ModTools | null = null;
 
   public mount(streamerName: string, volume: number = 50, quality: string = 'auto') {
     if (this.container) {
@@ -127,6 +135,9 @@ export class PlayerContainer {
     );
     this.controlsCleanup = controls.cleanup;
 
+    // Add aria-live and role to chat messages container (will be set after chat init)
+    // Done after TwitchChat creates the message list element
+
     // Initialize Toast Manager
     this.toastManager = new ToastManager(videoContainer);
     this.toastHandler = ((e: Event) => {
@@ -149,6 +160,28 @@ export class PlayerContainer {
     // Initialize IRC Chat
     this.twitchChat = new TwitchChat(streamerName, chatContainer);
     this.twitchChat.connect();
+
+    // Accessibility: add role="log" and aria-live to chat messages container
+    const chatMsgs = chatContainer.querySelector('.irc-chat-messages');
+    if (chatMsgs) {
+      chatMsgs.setAttribute('role', 'log');
+      chatMsgs.setAttribute('aria-live', 'polite');
+      chatMsgs.setAttribute('aria-label', 'Chat messages');
+    }
+
+    // Phase 3: Initialize Predictions/Polls/Drops display
+    this.twitchFeatures = new TwitchFeatures(streamerName, controls.controlsBar, videoContainer);
+
+    // Phase 3: Initialize Multi-Stream Manager
+    this.multiStreamManager = new MultiStreamManager(this.container, videoContainer);
+    this.multiStreamManager.init(controls.controlsBar);
+
+    // Phase 3: Initialize Public API
+    this.publicAPI = new PublicAPI(video, this.videoController, streamerName);
+    this.publicAPI.init();
+
+    // Phase 3: Initialize Mod Tools
+    this.modTools = new ModTools(streamerName, controls.controlsBar, videoContainer, chatContainer);
 
     // Initialize Channel Points Claimer
     chrome.storage.sync.get(['autoClaimPoints'], (data) => {
@@ -316,6 +349,26 @@ export class PlayerContainer {
     }
 
     this.themeManager = null;
+
+    if (this.publicAPI) {
+      this.publicAPI.destroy();
+      this.publicAPI = null;
+    }
+
+    if (this.twitchFeatures) {
+      this.twitchFeatures.destroy();
+      this.twitchFeatures = null;
+    }
+
+    if (this.multiStreamManager) {
+      this.multiStreamManager.destroy();
+      this.multiStreamManager = null;
+    }
+
+    if (this.modTools) {
+      this.modTools.destroy();
+      this.modTools = null;
+    }
 
     if (this.toastManager) {
       this.toastManager.destroy();
