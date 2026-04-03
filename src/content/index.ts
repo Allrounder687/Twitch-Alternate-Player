@@ -12,29 +12,49 @@ function getStreamerNameFromUrl(): string | null {
 
 let currentStreamer: string | null = null;
 let playerEnabled = false;
+let currentVolume = 50;
+let currentQuality = 'auto';
+
 function isContextValid() {
   return typeof chrome !== 'undefined' && !!chrome.runtime && !!chrome.runtime.id;
 }
 
-const checkAndMount = () => {
-  if (!isContextValid()) return;
-  
+// Initial storage load
+if (isContextValid()) {
   chrome.storage.sync.get(['isEnabled', 'volume', 'quality'], (data) => {
     if (chrome.runtime.lastError) return;
-    
     playerEnabled = !!data.isEnabled;
-    const streamerName = getStreamerNameFromUrl();
-    
-    if (playerEnabled && streamerName) {
-      if (currentStreamer !== streamerName) {
-        currentStreamer = streamerName;
-        playerInstance.mount(streamerName, data.volume || 50, data.quality || 'auto');
-      }
-    } else if (!streamerName || !playerEnabled) {
-      currentStreamer = null;
-      playerInstance.unmount();
-    }
+    currentVolume = data.volume || 50;
+    currentQuality = data.quality || 'auto';
+    checkAndMount();
   });
+
+  // Listen for storage changes instead of polling every 2s
+  chrome.storage.sync.onChanged.addListener((changes) => {
+    if (changes.isEnabled) playerEnabled = changes.isEnabled.newValue;
+    if (changes.volume) currentVolume = changes.volume.newValue;
+    if (changes.quality) currentQuality = changes.quality.newValue;
+    checkAndMount();
+  });
+}
+
+const checkAndMount = () => {
+  const streamerName = getStreamerNameFromUrl();
+  
+  if (playerEnabled && streamerName) {
+    if (currentStreamer !== streamerName) {
+      currentStreamer = streamerName;
+      playerInstance.mount(streamerName, currentVolume, currentQuality);
+    }
+  } else if (!streamerName || !playerEnabled) {
+    currentStreamer = null;
+    playerInstance.unmount();
+  }
+
+  // Pre-fetch if we are on a new streamer but player is disabled
+  if (streamerName && !playerEnabled && streamerName !== currentStreamer) {
+    chrome.runtime.sendMessage({ action: 'PREFETCH_STREAM', streamerName });
+  }
 };
 
 // Listen for messages from the popup (e.g. toggling the player)
@@ -49,11 +69,9 @@ if (isContextValid()) {
 
 function injectPlayerButton() {
   if (!isContextValid()) return;
-  // Only inject if we are on a stream page
   const streamerName = getStreamerNameFromUrl();
   if (!streamerName) return;
 
-  // Try to find the right-side control bar in Twitch's live player DOM
   const controlGroup = 
     document.querySelector('[data-a-target="player-controls-right"]') || 
     document.querySelector('.player-controls__right-control-group') ||
@@ -96,28 +114,22 @@ function injectPlayerButton() {
     e.stopPropagation();
     if (!isContextValid()) return;
     
-    chrome.storage.sync.get(['isEnabled'], (data) => {
-      const toggleState = !data.isEnabled;
-      chrome.storage.sync.set({ isEnabled: toggleState }, () => {
-        playerEnabled = toggleState;
-        btn.innerText = playerEnabled ? 'Use Default Player' : 'Alt Player';
-        checkAndMount();
-      });
-    });
+    const toggleState = !playerEnabled;
+    chrome.storage.sync.set({ isEnabled: toggleState });
+    // Local state will be updated by the listener
   };
 }
 
-// Twitch is an SPA, so we periodically check if the URL changed to a new streamer
+// Check for URL changes periodically (Twitch is an SPA)
 const mainInterval = setInterval(() => {
   if (!isContextValid()) {
     clearInterval(mainInterval);
     return;
   }
   checkAndMount();
-  injectPlayerButton();
 }, 2000);
 
-// Injection loop for the button (Twitch DOM constantly destroys/recreates controls)
+// Injection loop for the button
 const slowInterval = setInterval(() => {
   if (!isContextValid()) {
     clearInterval(slowInterval);

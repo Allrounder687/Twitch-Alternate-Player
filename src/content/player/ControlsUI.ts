@@ -28,6 +28,9 @@ export function createCustomControls(
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
       </button>
       <button class="ctrl-btn settings-btn" title="Settings">Quality</button>
+      <button class="ctrl-btn pip-btn" title="Mini Player">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H3c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 12H3V4h10v10z"></path><path d="M21 8h-4v2h4v10H11v-4H9v4c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"></path></svg>
+      </button>
       <button class="ctrl-btn fullscreen-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
       </button>
@@ -36,20 +39,39 @@ export function createCustomControls(
 
   // === SETTINGS MODAL ===
   const settingsModal = document.createElement('div');
-  settingsModal.className = 'settings-modal hidden';
-  settingsModal.innerHTML = `
-    <div class="setting-item">
-      <label>Quality</label>
-      <select class="quality-select">
-        <option value="auto">Auto</option>
-        <option value="1080p60">1080p60</option>
-        <option value="720p60">720p60</option>
-        <option value="480p30">480p</option>
-        <option value="360p30">360p</option>
-        <option value="audio_only">Audio Only</option>
-      </select>
-    </div>
-  `;
+  settingsModal.className = 'settings-modal';
+  
+  const updateSettingsUI = () => {
+    const qualities = ['auto', '1080p60', '720p60', '480p30', '360p30', 'audio_only'];
+    settingsModal.innerHTML = `
+      <div class="settings-group">
+        <span class="settings-label">Quality</span>
+        <div class="quality-list">
+          ${qualities.map(q => `
+            <div class="quality-option ${q === quality ? 'selected' : ''}" data-quality="${q}">
+              ${q === 'audio_only' ? 'Audio Only' : q === 'auto' ? 'Auto' : q}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    // Re-attach listeners to new elements
+    settingsModal.querySelectorAll('.quality-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const selected = opt.getAttribute('data-quality') || 'auto';
+        videoContainer.dispatchEvent(new CustomEvent('twitch-set-quality', { detail: selected }));
+        // Update storage
+        chrome.storage.sync.set({ quality: selected });
+        // Update local UI
+        quality = selected;
+        updateSettingsUI();
+        settingsModal.classList.remove('active');
+      });
+    });
+  };
+
+  updateSettingsUI();
 
   videoContainer.appendChild(controlsBar);
   videoContainer.appendChild(settingsModal);
@@ -102,22 +124,33 @@ export function createCustomControls(
   // Volume
   const updateVolumeIcon = () => {
     if (videoElement.muted || videoElement.volume === 0) {
-      volIcon.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
+      volIcon.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.58.45-1.24.8-1.97.98v2.09c1.24-.22 2.37-.74 3.33-1.47L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
+    } else if (videoElement.volume > 0.5) {
+      volIcon.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
     } else {
       volIcon.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>';
     }
   };
-  
-  volSlider.addEventListener('input', (e) => {
-    videoElement.volume = Number((e.target as HTMLInputElement).value) / 100;
-    videoElement.muted = false;
+
+  const toggleMute = () => {
+    videoElement.muted = !videoElement.muted;
+    updateVolumeIcon();
+  };
+
+  muteBtn.addEventListener('click', toggleMute);
+
+  volSlider.addEventListener('input', () => {
+    videoElement.volume = Number(volSlider.value) / 100;
+    videoElement.muted = videoElement.volume === 0;
     updateVolumeIcon();
   });
 
-  muteBtn.addEventListener('click', () => {
-    videoElement.muted = !videoElement.muted;
+  videoElement.addEventListener('volumechange', () => {
     updateVolumeIcon();
+    volSlider.value = (videoElement.volume * 100).toString();
   });
+
+  updateVolumeIcon();
 
 
   // Chat Toggling
@@ -138,28 +171,60 @@ export function createCustomControls(
   // Settings
   settingsBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    settingsModal.classList.toggle('hidden');
+    settingsModal.classList.toggle('active');
   });
 
-  videoContainer.addEventListener('click', (e) => {
+  document.addEventListener('click', (e) => {
     if (!settingsModal.contains(e.target as Node) && !settingsBtn.contains(e.target as Node)) {
-      settingsModal.classList.add('hidden');
+       settingsModal.classList.remove('active');
     }
   });
 
-  const qualitySelect = settingsModal.querySelector('.quality-select') as HTMLSelectElement;
-  qualitySelect.addEventListener('change', () => {
-    videoElement.dispatchEvent(new CustomEvent('twitch-set-quality', { detail: qualitySelect.value }));
-    settingsModal.classList.add('hidden');
+  // PiP (Mini Player)
+  const pipBtn = controlsBar.querySelector('.pip-btn') as HTMLButtonElement;
+  pipBtn.addEventListener('click', async () => {
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else {
+        await videoElement.requestPictureInPicture();
+      }
+    } catch (e) {
+      console.error("[Alt Player] PiP failed:", e);
+    }
   });
 
   // Hotkeys
   const keydownHandler = (e: KeyboardEvent) => {
+    // Ignore if user is typing in a text field
     const target = e.target as HTMLElement;
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
-    if (e.code === 'Space') {
-      e.preventDefault();
-      togglePlay();
+
+    switch (e.code) {
+      case 'Space':
+        e.preventDefault();
+        togglePlay();
+        break;
+      case 'KeyM':
+        e.preventDefault();
+        toggleMute();
+        break;
+      case 'KeyF':
+        e.preventDefault();
+        fullscreenBtn.click();
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        const up = Math.min(1, videoElement.volume + 0.1);
+        videoElement.volume = up;
+        volSlider.value = (up * 100).toString();
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        const down = Math.max(0, videoElement.volume - 0.1);
+        videoElement.volume = down;
+        volSlider.value = (down * 100).toString();
+        break;
     }
   };
   window.addEventListener('keydown', keydownHandler);
