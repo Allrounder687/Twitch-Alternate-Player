@@ -6,19 +6,6 @@ export function createCustomControls(
   chatContainer: HTMLElement,
   onClose: () => void
 ) {
-  // === TOP BAR ===
-  const topBar = document.createElement('div');
-  topBar.className = 'top-bar custom-ui';
-  topBar.innerHTML = `
-    <div class="stream-title">${streamerName}</div>
-    <div class="top-actions">
-      <button class="ctrl-btn close-btn" title="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-      </button>
-    </div>
-  `;
-  topBar.querySelector('.close-btn')!.addEventListener('click', onClose);
-
   // === BOTTOM CONTROLS ===
   const controlsBar = document.createElement('div');
   controlsBar.className = 'controls-bar custom-ui';
@@ -37,7 +24,6 @@ export function createCustomControls(
     </div>
     <div class="controls-section">
       <button class="ctrl-btn switch-default-btn" title="Return to Twitch Player">Default Player</button>
-      <button class="ctrl-btn chat-toggle-btn" title="Toggle Chat">Chat</button>
       <button class="ctrl-btn settings-btn" title="Settings">Quality</button>
       <button class="ctrl-btn fullscreen-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
@@ -62,7 +48,6 @@ export function createCustomControls(
     </div>
   `;
 
-  videoContainer.appendChild(topBar);
   videoContainer.appendChild(controlsBar);
   videoContainer.appendChild(settingsModal);
 
@@ -85,7 +70,6 @@ export function createCustomControls(
   const muteBtn = controlsBar.querySelector('.mute-btn') as HTMLButtonElement;
   const volIcon = muteBtn.querySelector('.vol-icon') as SVGElement;
   const volSlider = controlsBar.querySelector('.volume-slider') as HTMLInputElement;
-  const chatToggle = controlsBar.querySelector('.chat-toggle-btn') as HTMLButtonElement;
   const fullscreenBtn = controlsBar.querySelector('.fullscreen-btn') as HTMLButtonElement;
   const settingsBtn = controlsBar.querySelector('.settings-btn') as HTMLButtonElement;
   const switchDefaultBtn = controlsBar.querySelector('.switch-default-btn') as HTMLButtonElement;
@@ -132,18 +116,11 @@ export function createCustomControls(
     updateVolumeIcon();
   });
 
-  // Chat toggle
-  let chatVisible = true;
-  chatToggle.addEventListener('click', () => {
-    chatVisible = !chatVisible;
-    chatContainer.style.display = chatVisible ? 'block' : 'none';
-  });
 
   // Fullscreen
   fullscreenBtn.addEventListener('click', () => {
-    const layout = document.querySelector('.player-layout');
     if (!document.fullscreenElement) {
-      layout?.requestFullscreen().catch(() => {});
+      videoContainer.requestFullscreen().catch(() => {});
     } else {
       document.exitFullscreen();
     }

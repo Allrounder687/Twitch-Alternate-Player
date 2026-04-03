@@ -16,14 +16,34 @@ export class PlayerContainer {
       this.unmount();
     }
 
+    // Identifiers for Twitch player containers
+    const playerSelectors = [
+      '.video-player__container',
+      '.highwind-video-player',
+      '[data-a-target="player-container"]'
+    ];
+    
+    let target: HTMLElement | null = null;
+    for (const selector of playerSelectors) {
+      target = document.querySelector(selector) as HTMLElement;
+      if (target) break;
+    }
+
+    if (!target) {
+      console.error('[Alt Player] Could not find Twitch player container to overlay');
+      return;
+    }
+
+    // Ensure the target is relative so our absolute host fills it
+    if (getComputedStyle(target).position === 'static') {
+      target.style.position = 'relative';
+    }
+
     // Main overlay wrapper
     this.container = document.createElement('div');
     this.container.id = 'kreo-twitch-player-host';
 
-    const playerLayout = document.createElement('div');
-    playerLayout.className = 'player-layout';
-    
-    // Video bounding box
+    // Video container
     const videoContainer = document.createElement('div');
     videoContainer.className = 'video-container';
 
@@ -43,22 +63,13 @@ export class PlayerContainer {
     videoContainer.appendChild(video);
     videoContainer.appendChild(loader);
     videoContainer.appendChild(errorMsg);
-    
-    // Chat Container
-    const chatContainer = document.createElement('div');
-    chatContainer.className = 'chat-container';
-    chatContainer.innerHTML = `
-      <iframe src="https://www.twitch.tv/embed/${streamerName}/chat?parent=${window.location.hostname}&darkpopout" width="100%" height="100%" frameborder="0"></iframe>
-    `;
 
-    playerLayout.appendChild(videoContainer);
-    playerLayout.appendChild(chatContainer);
-
-    this.container.appendChild(playerLayout);
-    document.body.appendChild(this.container);
+    this.container.appendChild(videoContainer);
+    target.appendChild(this.container);
 
     // Initialize custom UI
-    const controls = createCustomControls(videoContainer, video, streamerName, quality, chatContainer, () => this.unmount());
+    // Pass a dummy div for chat since we use native chat now
+    const controls = createCustomControls(videoContainer, video, streamerName, quality, document.createElement('div'), () => this.unmount());
     this.controlsCleanup = controls.cleanup;
 
     // Trigger animation
