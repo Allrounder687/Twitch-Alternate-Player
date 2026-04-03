@@ -121,6 +121,70 @@ input[type="range"]::-webkit-slider-thumb:hover {
   background: var(--accent-hover);
 }
 
+/* Settings sections */
+.settings-section {
+  margin-top: 16px;
+}
+
+.section-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.settings-section .settings {
+  margin-top: 0;
+}
+
+/* Latency slider */
+.latency-slider {
+  display: flex;
+  gap: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.latency-option {
+  flex: 1;
+  padding: 6px 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.latency-option:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.latency-option:hover {
+  background: rgba(145, 70, 255, 0.1);
+  color: var(--text-main);
+}
+
+.latency-option.active {
+  background: var(--accent);
+  color: white;
+}
+
+/* Info text */
+.info-text {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+  font-style: italic;
+}
+
 /* Shortcuts info */
 .shortcuts-info {
   margin-top: 16px;

@@ -2,24 +2,52 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 
+type LatencyMode = 'ultra-low' | 'balanced' | 'stable';
+
+interface EmoteProviders {
+  bttv: boolean;
+  ffz: boolean;
+  seventv: boolean;
+}
+
+const LATENCY_LABELS: Record<LatencyMode, string> = {
+  'ultra-low': 'Ultra Low',
+  'balanced': 'Balanced',
+  'stable': 'Stable',
+};
+
 const App: React.FC = () => {
   const [isEnabled, setIsEnabled] = useState<boolean>(false);
   const [streamerName, setStreamerName] = useState<string>('');
   const [volume, setVolume] = useState<number>(50);
   const [quality, setQuality] = useState<string>('auto');
-  const [lowLatency, setLowLatency] = useState<boolean>(true);
+  const [latencyMode, setLatencyMode] = useState<LatencyMode>('balanced');
   const [chatEnabled, setChatEnabled] = useState<boolean>(true);
+  const [emoteProviders, setEmoteProviders] = useState<EmoteProviders>({ bttv: true, ffz: true, seventv: true });
+  const [autoClaimPoints, setAutoClaimPoints] = useState<boolean>(true);
+  const [twitchUsername, setTwitchUsername] = useState<string>('');
+  const [showAdNotifications, setShowAdNotifications] = useState<boolean>(true);
 
   useEffect(() => {
     chrome.storage.sync.get(
-      ['isEnabled', 'streamerName', 'volume', 'quality', 'lowLatency', 'chatEnabled'],
+      ['isEnabled', 'streamerName', 'volume', 'quality', 'latencyMode', 'lowLatency',
+       'chatEnabled', 'emoteProviders', 'autoClaimPoints', 'twitchUsername', 'showAdNotifications'],
       (data) => {
         setIsEnabled(data.isEnabled || false);
         setStreamerName(data.streamerName || '');
         setVolume(data.volume || 50);
         setQuality(data.quality || 'auto');
-        setLowLatency(data.lowLatency !== false);
+        // Migrate from old lowLatency boolean
+        if (data.latencyMode) {
+          setLatencyMode(data.latencyMode);
+        } else {
+          setLatencyMode(data.lowLatency !== false ? 'balanced' : 'stable');
+        }
         setChatEnabled(data.chatEnabled !== false);
+        setEmoteProviders(data.emoteProviders || { bttv: true, ffz: true, seventv: true });
+        setAutoClaimPoints(data.autoClaimPoints !== false);
+        setTwitchUsername(data.twitchUsername || '');
+        setShowAdNotifications(data.showAdNotifications !== false);
       }
     );
   }, []);
@@ -57,16 +85,39 @@ const App: React.FC = () => {
     chrome.storage.sync.set({ quality: newQuality });
   };
 
-  const handleLowLatencyToggle = () => {
-    const newState = !lowLatency;
-    setLowLatency(newState);
-    chrome.storage.sync.set({ lowLatency: newState });
+  const handleLatencyChange = (mode: LatencyMode) => {
+    setLatencyMode(mode);
+    chrome.storage.sync.set({ latencyMode: mode });
   };
 
   const handleChatToggle = () => {
     const newState = !chatEnabled;
     setChatEnabled(newState);
     chrome.storage.sync.set({ chatEnabled: newState });
+  };
+
+  const handleEmoteProviderToggle = (provider: keyof EmoteProviders) => {
+    const newProviders = { ...emoteProviders, [provider]: !emoteProviders[provider] };
+    setEmoteProviders(newProviders);
+    chrome.storage.sync.set({ emoteProviders: newProviders });
+  };
+
+  const handleAutoClaimToggle = () => {
+    const newState = !autoClaimPoints;
+    setAutoClaimPoints(newState);
+    chrome.storage.sync.set({ autoClaimPoints: newState });
+  };
+
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const name = e.target.value;
+    setTwitchUsername(name);
+    chrome.storage.sync.set({ twitchUsername: name });
+  };
+
+  const handleAdNotificationsToggle = () => {
+    const newState = !showAdNotifications;
+    setShowAdNotifications(newState);
+    chrome.storage.sync.set({ showAdNotifications: newState });
   };
 
   return (
@@ -113,12 +164,19 @@ const App: React.FC = () => {
           </select>
         </div>
 
-        <div className="form-group toggle-row">
-          <label>Low Latency</label>
-          <label className="switch small">
-            <input type="checkbox" checked={lowLatency} onChange={handleLowLatencyToggle} />
-            <span className="slider round"></span>
-          </label>
+        <div className="form-group">
+          <label>Latency Mode</label>
+          <div className="latency-slider">
+            {(['ultra-low', 'balanced', 'stable'] as LatencyMode[]).map((mode) => (
+              <button
+                key={mode}
+                className={`latency-option ${latencyMode === mode ? 'active' : ''}`}
+                onClick={() => handleLatencyChange(mode)}
+              >
+                {LATENCY_LABELS[mode]}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="form-group toggle-row">
@@ -127,6 +185,72 @@ const App: React.FC = () => {
             <input type="checkbox" checked={chatEnabled} onChange={handleChatToggle} />
             <span className="slider round"></span>
           </label>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <span className="section-title">Emote Providers</span>
+        <div className="settings">
+          <div className="form-group toggle-row">
+            <label>BTTV</label>
+            <label className="switch small">
+              <input type="checkbox" checked={emoteProviders.bttv} onChange={() => handleEmoteProviderToggle('bttv')} />
+              <span className="slider round"></span>
+            </label>
+          </div>
+          <div className="form-group toggle-row">
+            <label>FFZ</label>
+            <label className="switch small">
+              <input type="checkbox" checked={emoteProviders.ffz} onChange={() => handleEmoteProviderToggle('ffz')} />
+              <span className="slider round"></span>
+            </label>
+          </div>
+          <div className="form-group toggle-row">
+            <label>7TV</label>
+            <label className="switch small">
+              <input type="checkbox" checked={emoteProviders.seventv} onChange={() => handleEmoteProviderToggle('seventv')} />
+              <span className="slider round"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <span className="section-title">Features</span>
+        <div className="settings">
+          <div className="form-group toggle-row">
+            <label>Auto-Claim Points</label>
+            <label className="switch small">
+              <input type="checkbox" checked={autoClaimPoints} onChange={handleAutoClaimToggle} />
+              <span className="slider round"></span>
+            </label>
+          </div>
+
+          <div className="form-group">
+            <label>Twitch Username (for mentions)</label>
+            <input
+              type="text"
+              value={twitchUsername}
+              onChange={handleUsernameChange}
+              placeholder="Your username (auto-detected if empty)"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <span className="section-title">Ad Handling</span>
+        <div className="settings">
+          <div className="form-group toggle-row">
+            <label>Show Notifications</label>
+            <label className="switch small">
+              <input type="checkbox" checked={showAdNotifications} onChange={handleAdNotificationsToggle} />
+              <span className="slider round"></span>
+            </label>
+          </div>
+          <p className="info-text">
+            The player filters ad segments from the stream playlist. This may not catch all ads.
+          </p>
         </div>
       </div>
 

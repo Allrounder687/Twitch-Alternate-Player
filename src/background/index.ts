@@ -86,8 +86,12 @@ chrome.runtime.onInstalled.addListener((details) => {
       streamerName: '',
       volume: 50,
       quality: 'auto',
-      lowLatency: true,
+      latencyMode: 'balanced',
       chatEnabled: true,
+      emoteProviders: { bttv: true, ffz: true, seventv: true },
+      autoClaimPoints: true,
+      twitchUsername: '',
+      showAdNotifications: true,
     });
 
     chrome.tabs.create({ url: 'popup.html' });

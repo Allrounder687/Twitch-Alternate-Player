@@ -1,6 +1,7 @@
 /**
- * Manages BetterTTV and FrankerFaceZ emotes.
+ * Manages BetterTTV, FrankerFaceZ, and 7TV emotes.
  * Fetches global + channel emotes and provides word-based replacement.
+ * Supports per-provider toggles via storage.
  */
 
 interface BTTVEmote {
@@ -17,26 +18,60 @@ interface FFZEmoteSet {
   }>;
 }
 
+interface SevenTVEmote {
+  id: string;
+  name: string;
+  data?: {
+    host?: {
+      url: string;
+      files: Array<{ name: string; format: string }>;
+    };
+  };
+}
+
+export interface EmoteProviders {
+  bttv: boolean;
+  ffz: boolean;
+  seventv: boolean;
+}
+
 export class EmoteManager {
-  // code -> img URL
-  private emoteMap = new Map<string, string>();
+  // code -> { url, provider }
+  private emoteMap = new Map<string, { url: string; provider: 'bttv' | 'ffz' | 'seventv' }>();
   private loaded = false;
+  private providers: EmoteProviders = { bttv: true, ffz: true, seventv: true };
+
+  setProviders(providers: EmoteProviders): void {
+    this.providers = providers;
+  }
 
   async loadGlobalEmotes(): Promise<void> {
-    await Promise.allSettled([
-      this.fetchBTTVGlobal(),
-      this.fetchFFZGlobal(),
-    ]);
+    // Load provider settings first
+    try {
+      const data = await new Promise<Record<string, any>>((resolve) => {
+        chrome.storage.sync.get(['emoteProviders'], (d) => resolve(d));
+      });
+      if (data.emoteProviders) {
+        this.providers = data.emoteProviders;
+      }
+    } catch {
+      // Use defaults
+    }
+
+    const fetches: Promise<void>[] = [];
+    if (this.providers.bttv) fetches.push(this.fetchBTTVGlobal());
+    if (this.providers.ffz) fetches.push(this.fetchFFZGlobal());
+    if (this.providers.seventv) fetches.push(this.fetch7TVGlobal());
+    await Promise.allSettled(fetches);
     this.loaded = true;
   }
 
   async loadChannelEmotes(channel: string): Promise<void> {
-    // Need Twitch user ID for BTTV/FFZ channel emotes
-    // We'll try fetching by channel name — BTTV supports it
-    await Promise.allSettled([
-      this.fetchBTTVChannel(channel),
-      this.fetchFFZChannel(channel),
-    ]);
+    const fetches: Promise<void>[] = [];
+    if (this.providers.bttv) fetches.push(this.fetchBTTVChannel(channel));
+    if (this.providers.ffz) fetches.push(this.fetchFFZChannel(channel));
+    if (this.providers.seventv) fetches.push(this.fetch7TVChannel(channel));
+    await Promise.allSettled(fetches);
   }
 
   private async fetchBTTVGlobal(): Promise<void> {
@@ -45,7 +80,7 @@ export class EmoteManager {
       if (!res.ok) return;
       const emotes: BTTVEmote[] = await res.json();
       for (const e of emotes) {
-        this.emoteMap.set(e.code, `https://cdn.betterttv.net/emote/${e.id}/1x`);
+        this.emoteMap.set(e.code, { url: `https://cdn.betterttv.net/emote/${e.id}/1x`, provider: 'bttv' });
       }
     } catch {
       // Non-critical
@@ -60,7 +95,7 @@ export class EmoteManager {
       const data = await res.json();
       const allEmotes = [...(data.channelEmotes || []), ...(data.sharedEmotes || [])];
       for (const e of allEmotes) {
-        this.emoteMap.set(e.code, `https://cdn.betterttv.net/emote/${e.id}/1x`);
+        this.emoteMap.set(e.code, { url: `https://cdn.betterttv.net/emote/${e.id}/1x`, provider: 'bttv' });
       }
     } catch {
       // BTTV needs numeric user ID for some channels; best effort
@@ -77,7 +112,7 @@ export class EmoteManager {
         for (const e of set.emoticons) {
           const url = e.urls['1'] || e.urls['2'] || Object.values(e.urls)[0];
           if (url) {
-            this.emoteMap.set(e.name, url.startsWith('//') ? `https:${url}` : url);
+            this.emoteMap.set(e.name, { url: url.startsWith('//') ? `https:${url}` : url, provider: 'ffz' });
           }
         }
       }
@@ -96,7 +131,7 @@ export class EmoteManager {
         for (const e of set.emoticons) {
           const url = e.urls['1'] || e.urls['2'] || Object.values(e.urls)[0];
           if (url) {
-            this.emoteMap.set(e.name, url.startsWith('//') ? `https:${url}` : url);
+            this.emoteMap.set(e.name, { url: url.startsWith('//') ? `https:${url}` : url, provider: 'ffz' });
           }
         }
       }
@@ -105,9 +140,44 @@ export class EmoteManager {
     }
   }
 
+  private async fetch7TVGlobal(): Promise<void> {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch('https://7tv.io/v3/emote-sets/global', { signal: controller.signal });
+      clearTimeout(timeout);
+      if (!res.ok) return;
+      const data = await res.json();
+      const emotes: SevenTVEmote[] = data.emotes || [];
+      for (const e of emotes) {
+        this.emoteMap.set(e.name, { url: `https://cdn.7tv.app/emote/${e.id}/1x.webp`, provider: 'seventv' });
+      }
+    } catch {
+      // 7TV API can be slow — non-critical
+    }
+  }
+
+  private async fetch7TVChannel(channel: string): Promise<void> {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(`https://7tv.io/v3/users/twitch/${channel}`, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (!res.ok) return;
+      const data = await res.json();
+      const emotes: SevenTVEmote[] = data.emote_set?.emotes || [];
+      for (const e of emotes) {
+        this.emoteMap.set(e.name, { url: `https://cdn.7tv.app/emote/${e.id}/1x.webp`, provider: 'seventv' });
+      }
+    } catch {
+      // Non-critical
+    }
+  }
+
   /**
    * Given HTML (possibly containing Twitch emote <img> tags), replace word tokens
-   * that match BTTV/FFZ emote codes with <img> tags.
+   * that match BTTV/FFZ/7TV emote codes with <img> tags.
+   * Only replaces emotes from enabled providers.
    */
   replaceEmotesInHtml(html: string): string {
     if (this.emoteMap.size === 0) return html;
@@ -120,9 +190,9 @@ export class EmoteManager {
 
       // Replace words in text nodes
       parts[i] = parts[i].replace(/\S+/g, (word) => {
-        const url = this.emoteMap.get(word);
-        if (url) {
-          return `<img class="irc-emote" src="${url}" alt="${word}" title="${word}">`;
+        const entry = this.emoteMap.get(word);
+        if (entry && this.providers[entry.provider]) {
+          return `<img class="irc-emote" src="${entry.url}" alt="${word}" title="${word}">`;
         }
         return word;
       });
@@ -135,6 +205,7 @@ export class EmoteManager {
   }
 
   getEmoteUrl(code: string): string | undefined {
-    return this.emoteMap.get(code);
+    const entry = this.emoteMap.get(code);
+    return entry?.url;
   }
 }

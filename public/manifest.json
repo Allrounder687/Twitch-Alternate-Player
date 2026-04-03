@@ -19,6 +19,8 @@
     "https://*.cloudfront.net/*",
     "https://api.betterttv.net/*",
     "https://api.frankerfacez.com/*",
+    "https://7tv.io/*",
+    "https://cdn.7tv.app/*",
     "wss://irc-ws.chat.twitch.tv/*"
   ],
   "background": {
