@@ -189,7 +189,16 @@ export class MultiStreamManager {
 
     // Explicitly play once data is ready (Chrome autoplay policy)
     video.addEventListener('canplay', () => {
-      video.play().catch(() => {});
+      video.play().catch((err) => {
+        if (err.name === 'AbortError') {
+          setTimeout(() => {
+            video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
+          }, 200);
+        } else if (err.name === 'NotAllowedError') {
+          video.muted = true;
+          video.play().catch(() => {});
+        }
+      });
     }, { once: true });
 
     const streamCell: StreamCell = {

@@ -259,10 +259,27 @@ export function attachVideo(
             hlsInstance.nextLoadLevel = highestLevel;
           }
 
-          videoElement.play().catch(() => {
-            videoElement.muted = true;
-            videoElement.play().catch((e) => console.warn('[Alt Player] Autoplay failed:', e?.message || String(e)));
-          });
+          const tryPlay = () => {
+            videoElement.play().catch((err) => {
+              if (err.name === 'AbortError') {
+                setTimeout(() => {
+                  videoElement.play().catch(() => {
+                    videoElement.muted = true;
+                    videoElement.play().catch(() => {});
+                  });
+                }, 200);
+              } else if (err.name === 'NotAllowedError') {
+                videoElement.muted = true;
+                videoElement.play().catch(() => {});
+              }
+            });
+          };
+
+          if (videoElement.readyState >= 3) {
+            tryPlay();
+          } else {
+            videoElement.addEventListener('canplay', tryPlay, { once: true });
+          }
         });
 
         hlsInstance.on(Hls.Events.ERROR, (_event, data) => {
@@ -296,10 +313,27 @@ export function attachVideo(
         videoElement.src = mediaSourceUrl;
         videoElement.addEventListener('loadedmetadata', () => {
           hideLoader();
-          videoElement.play().catch(() => {
-            videoElement.muted = true;
-            videoElement.play().catch((e) => console.warn('[Alt Player] Autoplay fallback failed:', e?.message || String(e)));
-          });
+          const tryPlay = () => {
+            videoElement.play().catch((err) => {
+              if (err.name === 'AbortError') {
+                setTimeout(() => {
+                  videoElement.play().catch(() => {
+                    videoElement.muted = true;
+                    videoElement.play().catch(() => {});
+                  });
+                }, 200);
+              } else if (err.name === 'NotAllowedError') {
+                videoElement.muted = true;
+                videoElement.play().catch(() => {});
+              }
+            });
+          };
+
+          if (videoElement.readyState >= 3) {
+            tryPlay();
+          } else {
+            videoElement.addEventListener('canplay', tryPlay, { once: true });
+          }
         });
       } else {
         showError('Your browser does not support HLS stream playback.');

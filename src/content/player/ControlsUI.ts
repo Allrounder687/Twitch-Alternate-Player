@@ -558,10 +558,7 @@ export function createCustomControls(
 
   // === Pop-Out Player ===
   popoutBtn.addEventListener('click', () => {
-    const popoutUrl = chrome.runtime.getURL(
-      `popout.html?channel=${encodeURIComponent(streamerName)}`
-    );
-    window.open(popoutUrl, '_blank', 'width=640,height=360,menubar=no,toolbar=no,location=no,status=no');
+    chrome.runtime.sendMessage({ action: 'OPEN_POPOUT', channel: streamerName });
   });
 
   // === Theater Mode ===

@@ -84,6 +84,11 @@ export class ThemeManager {
       this.hostElement.style.setProperty(key, value);
     }
 
+    // Recompute --ui-bg when --ui-opacity is set (modern syntax needed for var() in alpha)
+    const opacity = config.custom.uiOpacity || preset.vars['--ui-opacity'] || '0.7';
+    this.hostElement.style.setProperty('--ui-opacity', opacity);
+    this.hostElement.style.setProperty('--ui-bg', `rgb(0 0 0 / ${opacity})`);
+
     // Apply custom overrides
     if (config.custom.accentColor) {
       this.hostElement.style.setProperty('--accent-color', config.custom.accentColor);
@@ -102,6 +107,7 @@ export class ThemeManager {
     }
     if (config.custom.uiOpacity) {
       this.hostElement.style.setProperty('--ui-opacity', config.custom.uiOpacity);
+      this.hostElement.style.setProperty('--ui-bg', `rgb(0 0 0 / ${config.custom.uiOpacity})`);
     }
 
     // Apply chat-specific styles that use the CSS variables
@@ -135,6 +141,13 @@ export class ThemeManager {
     chrome.storage.sync.get(['theme'], (data) => {
       const config: ThemeConfig = data.theme || { preset: 'twitch-dark', custom: {} };
       this.applyTheme(config);
+    });
+
+    // Listen for changes so theme updates apply immediately
+    chrome.storage.sync.onChanged.addListener((changes) => {
+      if (changes.theme?.newValue) {
+        this.applyTheme(changes.theme.newValue);
+      }
     });
   }
 

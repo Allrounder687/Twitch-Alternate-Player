@@ -40,7 +40,23 @@ function loadStream(url: string) {
       let highest = -1, maxH = 0;
       data.levels.forEach((l, i) => { if (l.height > maxH) { maxH = l.height; highest = i; } });
       if (highest !== -1) { hls.startLevel = highest; hls.nextLoadLevel = highest; }
-      video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
+      const tryPlay = () => {
+        video.play().catch((err) => {
+          if (err.name === 'AbortError') {
+            setTimeout(() => {
+              video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
+            }, 200);
+          } else if (err.name === 'NotAllowedError') {
+            video.muted = true;
+            video.play().catch(() => {});
+          }
+        });
+      };
+      if (video.readyState >= 3) {
+        tryPlay();
+      } else {
+        video.addEventListener('canplay', tryPlay, { once: true });
+      }
     });
     hls.on(Hls.Events.ERROR, (_event, data) => {
       if (data.fatal) {
@@ -51,6 +67,25 @@ function loadStream(url: string) {
     });
   } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
     video.src = url;
-    video.addEventListener('loadedmetadata', () => { loader.classList.add('hidden'); video.play().catch(() => {}); });
+    video.addEventListener('loadedmetadata', () => {
+      loader.classList.add('hidden');
+      const tryPlay = () => {
+        video.play().catch((err) => {
+          if (err.name === 'AbortError') {
+            setTimeout(() => {
+              video.play().catch(() => { video.muted = true; video.play().catch(() => {}); });
+            }, 200);
+          } else if (err.name === 'NotAllowedError') {
+            video.muted = true;
+            video.play().catch(() => {});
+          }
+        });
+      };
+      if (video.readyState >= 3) {
+        tryPlay();
+      } else {
+        video.addEventListener('canplay', tryPlay, { once: true });
+      }
+    });
   }
 }

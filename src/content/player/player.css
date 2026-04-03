@@ -1,17 +1,15 @@
 /* Basic Minimalist Theme */
-:root {
+#kreo-twitch-player-host {
   --player-bg: #000;
-  --ui-bg: rgba(0, 0, 0, var(--ui-opacity));
+  --ui-opacity: 0.7;
+  --ui-bg: rgb(0 0 0 / var(--ui-opacity));
   --accent-color: #9146FF;
   --text-primary: #fff;
   --text-secondary: #adadb8;
   --chat-bg: #18181b;
   --chat-font-size: 13px;
   --chat-spacing: 3px;
-  --ui-opacity: 0.7;
-}
 
-#kreo-twitch-player-host {
   position: absolute;
   top: 0;
   left: 0;
@@ -925,16 +923,22 @@ video {
 }
 
 /* Theme: Light */
+#kreo-twitch-player-host.theme-light {
+  --text-primary: #0e0e10;
+  --text-secondary: #53535f;
+  --chat-bg: #f7f7f8;
+}
+
 #kreo-twitch-player-host.theme-light .chat-container {
-  border-left-color: #e0e0e0;
+  border-left-color: #e5e5e5;
 }
 
 #kreo-twitch-player-host.theme-light .irc-chat-text {
-  color: #1a1a1a;
+  color: #0e0e10;
 }
 
 #kreo-twitch-player-host.theme-light .irc-chat-system {
-  color: #666;
+  color: #53535f;
 }
 
 #kreo-twitch-player-host.theme-light .irc-chat-header {
@@ -946,7 +950,20 @@ video {
 }
 
 #kreo-twitch-player-host.theme-light .irc-chat-title {
-  color: #1a1a1a;
+  color: #0e0e10;
+}
+
+#kreo-twitch-player-host.theme-light .settings-modal {
+  background: rgba(247, 247, 248, 0.95);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+#kreo-twitch-player-host.theme-light .quality-option {
+  color: #0e0e10;
+}
+
+#kreo-twitch-player-host.theme-light .quality-option:hover {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 /* Theme: High Contrast */
@@ -1027,7 +1044,7 @@ input:focus-visible,
 }
 
 #kreo-twitch-player-host.theme-high-contrast .chat-container {
-  border-left: 3px solid #fff !important;
+  border-left: 2px solid #FFD700;
 }
 
 #kreo-twitch-player-host.theme-high-contrast .ctrl-btn {
