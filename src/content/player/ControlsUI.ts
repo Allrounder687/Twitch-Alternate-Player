@@ -13,51 +13,53 @@ export function createCustomControls(
   // === BOTTOM CONTROLS ===
   const controlsBar = document.createElement('div');
   controlsBar.className = 'controls-bar custom-ui';
+  controlsBar.setAttribute('role', 'toolbar');
+  controlsBar.setAttribute('aria-label', 'Player controls');
   controlsBar.innerHTML = `
     <div class="controls-section">
-      <button class="ctrl-btn play-btn" title="Play/Pause (Space)">
+      <button class="ctrl-btn play-btn" title="Play/Pause (Space)" tabindex="0" aria-label="Play or pause stream">
         <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
       </button>
       <div class="volume-container">
-        <button class="ctrl-btn mute-btn" title="Mute (M)">
+        <button class="ctrl-btn mute-btn" title="Mute (M)" tabindex="0" aria-label="Toggle mute">
           <svg class="vol-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
         </button>
-        <input type="range" class="volume-slider" min="0" max="100" value="${videoElement.volume * 100}">
+        <input type="range" class="volume-slider" min="0" max="100" value="${videoElement.volume * 100}" aria-label="Volume">
       </div>
-      <span class="live-indicator">LIVE</span>
-      <span class="latency-display" title="Click to cycle latency mode"></span>
-      <span class="ad-shield-icon" title="Ad filter">
+      <span class="live-indicator" aria-label="Stream is live">LIVE</span>
+      <span class="latency-display" title="Click to cycle latency mode" tabindex="0" role="button" aria-label="Stream latency - click to cycle mode"></span>
+      <span class="ad-shield-icon" title="Ad filter" aria-label="Ad filter status">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
       </span>
     </div>
     <div class="controls-section">
-      <button class="ctrl-btn clip-btn" title="Record Clip (30s)">
+      <button class="ctrl-btn clip-btn" title="Record Clip (30s)" tabindex="0" aria-label="Record a 30-second clip">
         <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
       </button>
-      <button class="ctrl-btn stats-btn" title="Stream Stats">
+      <button class="ctrl-btn stats-btn" title="Stream Stats" tabindex="0" aria-label="Toggle stream statistics overlay">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 5-5"/></svg>
       </button>
-      <button class="ctrl-btn audio-only-btn" title="Audio Only">
+      <button class="ctrl-btn audio-only-btn" title="Audio Only" tabindex="0" aria-label="Toggle audio-only mode">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
       </button>
-      <button class="ctrl-btn switch-default-btn" title="Return to Twitch Player">Default Player</button>
-      <button class="ctrl-btn chat-toggle-btn" title="Toggle Chat">
+      <button class="ctrl-btn switch-default-btn" title="Return to Twitch Player" tabindex="0" aria-label="Switch to default Twitch player">Default Player</button>
+      <button class="ctrl-btn chat-toggle-btn" title="Toggle Chat" tabindex="0" aria-label="Toggle chat sidebar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
       </button>
-      <button class="ctrl-btn layout-btn" title="Layout Preset">
+      <button class="ctrl-btn layout-btn" title="Layout Preset" tabindex="0" aria-label="Change layout preset">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
       </button>
-      <button class="ctrl-btn settings-btn" title="Quality">Quality</button>
-      <button class="ctrl-btn popout-btn" title="Pop-Out Player">
+      <button class="ctrl-btn settings-btn" title="Quality" tabindex="0" aria-label="Change stream quality">Quality</button>
+      <button class="ctrl-btn popout-btn" title="Pop-Out Player" tabindex="0" aria-label="Open player in pop-out window">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
       </button>
-      <button class="ctrl-btn pip-btn" title="Picture-in-Picture">
+      <button class="ctrl-btn pip-btn" title="Picture-in-Picture" tabindex="0" aria-label="Toggle picture-in-picture mode">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="12" y="9" width="8" height="6" rx="1" fill="currentColor" opacity="0.4"/></svg>
       </button>
-      <button class="ctrl-btn theater-btn" title="Theater Mode (T)">
+      <button class="ctrl-btn theater-btn" title="Theater Mode (T)" tabindex="0" aria-label="Toggle theater mode">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 5v14h20V5H2zm18 12H4V7h16v10z"/></svg>
       </button>
-      <button class="ctrl-btn fullscreen-btn" title="Fullscreen (F)">
+      <button class="ctrl-btn fullscreen-btn" title="Fullscreen (F)" tabindex="0" aria-label="Toggle fullscreen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
       </button>
     </div>
@@ -259,10 +261,79 @@ export function createCustomControls(
   };
   document.addEventListener('twitch-points-claimed', pointsClaimedHandler);
 
+  // === ARIA-LIVE ANNOUNCER ===
+  const ariaAnnouncer = document.createElement('div');
+  ariaAnnouncer.className = 'sr-only';
+  ariaAnnouncer.setAttribute('role', 'status');
+  ariaAnnouncer.setAttribute('aria-live', 'assertive');
+  ariaAnnouncer.setAttribute('aria-atomic', 'true');
+
+  const announce = (msg: string) => {
+    ariaAnnouncer.textContent = '';
+    // Force reflow so screen reader picks up the change
+    requestAnimationFrame(() => { ariaAnnouncer.textContent = msg; });
+  };
+
+  // Announce play/pause state changes
+  videoElement.addEventListener('play', () => announce('Stream playing'));
+  videoElement.addEventListener('pause', () => announce('Stream paused'));
+
+  // === CLOSED CAPTIONS TOGGLE ===
+  const ccBtn = document.createElement('button');
+  ccBtn.className = 'ctrl-btn cc-btn';
+  ccBtn.title = 'Closed Captions';
+  ccBtn.tabIndex = 0;
+  ccBtn.setAttribute('aria-label', 'Toggle closed captions');
+  ccBtn.style.display = 'none'; // Hidden until CC track found
+  ccBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 12h2m6 0h2M7 8h4m6 0h-4"/></svg>`;
+
+  let ccEnabled = false;
+  const hlsInstance = videoController.getHlsInstance();
+
+  // Check for subtitle tracks when HLS manifest is parsed
+  const checkCCTracks = () => {
+    const hls = videoController.getHlsInstance();
+    if (hls && hls.subtitleTracks && hls.subtitleTracks.length > 0) {
+      ccBtn.style.display = 'flex';
+    }
+  };
+
+  // Check periodically (HLS may load subtitle tracks after initial manifest)
+  const ccCheckInterval = window.setInterval(() => {
+    checkCCTracks();
+    const hls = videoController.getHlsInstance();
+    if (hls && hls.subtitleTracks && hls.subtitleTracks.length > 0) {
+      window.clearInterval(ccCheckInterval);
+    }
+  }, 3000);
+
+  ccBtn.addEventListener('click', () => {
+    const hls = videoController.getHlsInstance();
+    if (!hls) return;
+    ccEnabled = !ccEnabled;
+    if (ccEnabled && hls.subtitleTracks.length > 0) {
+      hls.subtitleTrack = 0;
+      hls.subtitleDisplay = true;
+    } else {
+      hls.subtitleTrack = -1;
+      hls.subtitleDisplay = false;
+    }
+    ccBtn.classList.toggle('active-toggle', ccEnabled);
+    announce(ccEnabled ? 'Closed captions enabled' : 'Closed captions disabled');
+  });
+
+  // Insert CC button before fullscreen
+  const fullscreenBtnEl = controlsBar.querySelector('.fullscreen-btn');
+  const rightSectionEl = controlsBar.querySelector('.controls-section:last-child');
+  if (rightSectionEl && fullscreenBtnEl) {
+    rightSectionEl.insertBefore(ccBtn, fullscreenBtnEl);
+  }
+
   videoContainer.appendChild(controlsBar);
   videoContainer.appendChild(settingsModal);
   videoContainer.appendChild(layoutDropdown);
   videoContainer.appendChild(statsOverlay);
+  videoContainer.appendChild(ariaAnnouncer);
 
   // === Auto-hide UI ===
   let hideTimeout: number;
@@ -619,6 +690,8 @@ export function createCustomControls(
       videoContainer.removeEventListener('wheel', wheelHandler);
       videoElement.removeEventListener('twitch-ad-blocked', adBlockedHandler);
       document.removeEventListener('twitch-points-claimed', pointsClaimedHandler);
+      window.clearInterval(ccCheckInterval);
     },
+    controlsBar,
   };
 }

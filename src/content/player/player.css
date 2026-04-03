@@ -899,3 +899,733 @@ video {
 .error-reload-btn:hover {
   background: #a970ff;
 }
+
+/* ═══════════════════════════════════════════
+   PHASE 3: Accessibility
+   ═══════════════════════════════════════════ */
+
+/* Visible focus indicators */
+.ctrl-btn:focus-visible,
+button:focus-visible,
+input:focus-visible,
+[tabindex="0"]:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* Screen-reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High Contrast theme enhancements */
+#kreo-twitch-player-host.theme-high-contrast {
+  --accent-color: #FFD700;
+  --text-primary: #ffffff;
+  --text-secondary: #e0e0e0;
+}
+
+#kreo-twitch-player-host.theme-high-contrast .chat-container {
+  border-left: 3px solid #fff !important;
+}
+
+#kreo-twitch-player-host.theme-high-contrast .ctrl-btn {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+#kreo-twitch-player-host.theme-high-contrast .ctrl-btn:hover,
+#kreo-twitch-player-host.theme-high-contrast .ctrl-btn:focus-visible {
+  border-color: #FFD700;
+  background: rgba(255, 215, 0, 0.15);
+}
+
+#kreo-twitch-player-host.theme-high-contrast .irc-chat-msg {
+  border-left-width: 3px;
+}
+
+#kreo-twitch-player-host.theme-high-contrast .irc-chat-header,
+#kreo-twitch-player-host.theme-high-contrast .irc-chat-input-area {
+  border-color: #fff !important;
+}
+
+/* CC button */
+.cc-btn.active-toggle {
+  color: var(--accent-color);
+  background: rgba(145, 70, 255, 0.15);
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 3: Predictions/Polls/Drops Panel
+   ═══════════════════════════════════════════ */
+
+.features-btn {
+  position: relative;
+}
+
+.features-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  line-height: 1;
+}
+
+.features-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 100%;
+  background: rgba(15, 15, 18, 0.95);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 13px;
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+.features-panel.active {
+  transform: translateX(0);
+}
+
+.features-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.features-panel-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.features-panel-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.features-panel-close:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.features-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+}
+
+.features-section {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.features-section:last-child {
+  border-bottom: none;
+}
+
+.features-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--accent-color);
+  margin-bottom: 4px;
+}
+
+.features-section-subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.features-outcome {
+  margin-bottom: 8px;
+}
+
+.features-outcome-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 3px;
+}
+
+.features-outcome-title {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.features-outcome-pct {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.features-progress-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.features-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.features-outcome-stats {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.features-total {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  text-align: right;
+}
+
+.features-empty {
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-align: center;
+  padding: 24px 0;
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 3: Multi-Stream Grid
+   ═══════════════════════════════════════════ */
+
+/* When multi-stream is active, convert host to a grid */
+#kreo-twitch-player-host.multi-stream-active {
+  display: grid;
+}
+
+/* Grid layouts based on stream count */
+#kreo-twitch-player-host[data-stream-count="2"] {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
+}
+
+#kreo-twitch-player-host[data-stream-count="2"] .chat-container {
+  display: none !important;
+}
+
+#kreo-twitch-player-host[data-stream-count="3"] {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+#kreo-twitch-player-host[data-stream-count="3"] .video-container {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+#kreo-twitch-player-host[data-stream-count="3"] .chat-container {
+  display: none !important;
+}
+
+#kreo-twitch-player-host[data-stream-count="4"] {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+#kreo-twitch-player-host[data-stream-count="4"] .chat-container {
+  display: none !important;
+}
+
+.multi-stream-grid {
+  display: contents;
+}
+
+.multi-stream-cell {
+  position: relative;
+  background: #000;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.multi-stream-cell video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.multi-stream-cell.audio-focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
+.multi-stream-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 6px 10px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.multi-stream-cell:hover .multi-stream-overlay {
+  opacity: 1;
+}
+
+.multi-stream-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  flex: 1;
+}
+
+.multi-stream-volume {
+  width: 50px;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  outline: none;
+}
+
+.multi-stream-volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+}
+
+.multi-stream-close {
+  background: rgba(239, 68, 68, 0.8);
+  border: none;
+  color: #fff;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.multi-stream-close:hover {
+  background: #ef4444;
+}
+
+.multi-stream-dialog {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(15, 15, 18, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 16px;
+  z-index: 200;
+  display: flex;
+  gap: 8px;
+}
+
+.multi-stream-input {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #fff;
+  padding: 6px 10px;
+  font-size: 13px;
+  outline: none;
+  width: 160px;
+}
+
+.multi-stream-input:focus {
+  border-color: var(--accent-color);
+}
+
+.multi-stream-go-btn {
+  background: var(--accent-color);
+  border: none;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.multi-stream-go-btn:hover {
+  background: #a970ff;
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 3: Mod Tools Panel
+   ═══════════════════════════════════════════ */
+
+.mod-auth-indicator {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #666;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.mod-auth-indicator.authenticated {
+  background: #10b981;
+}
+
+.mod-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 280px;
+  height: 100%;
+  background: rgba(15, 15, 18, 0.95);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 160;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 13px;
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+.mod-panel.active {
+  transform: translateX(0);
+}
+
+.mod-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.mod-panel-title {
+  font-weight: 600;
+  font-size: 14px;
+  flex: 1;
+}
+
+.mod-mode-indicator {
+  font-size: 9px;
+  font-weight: 700;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+}
+
+.mod-panel-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.mod-panel-close:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mod-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.mod-panel-info {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.mod-connect-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background: var(--accent-color);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mod-connect-btn:hover {
+  background: #a970ff;
+}
+
+.mod-user-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.mod-disconnect-btn {
+  background: none;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #ef4444;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.mod-disconnect-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.mod-section {
+  padding: 8px 0;
+}
+
+.mod-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.mod-timeout-buttons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.mod-action-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.mod-action-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.mod-ban-btn {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.mod-ban-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.mod-toggles {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.mod-toggle-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mod-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mod-toggle-btn.active {
+  background: rgba(145, 70, 255, 0.15);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.mod-chat-input-wrapper {
+  display: flex;
+  gap: 6px;
+}
+
+.mod-chat-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: #fff;
+  padding: 6px 8px;
+  font-size: 12px;
+  outline: none;
+}
+
+.mod-chat-input:focus {
+  border-color: var(--accent-color);
+}
+
+.mod-chat-send {
+  background: var(--accent-color);
+  border: none;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mod-chat-send:hover {
+  background: #a970ff;
+}
+
+/* Inline chat input (replaces anonymous label when authenticated) */
+.mod-inline-chat {
+  display: flex;
+  gap: 6px;
+}
+
+.mod-inline-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: #fff;
+  padding: 6px 8px;
+  font-size: 12px;
+  outline: none;
+}
+
+.mod-inline-input:focus {
+  border-color: var(--accent-color);
+}
+
+.mod-inline-send {
+  background: var(--accent-color);
+  border: none;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.mod-inline-send:hover {
+  background: #a970ff;
+}
+
+/* Context menu for right-click on username */
+.mod-context-menu {
+  position: fixed;
+  background: rgba(15, 15, 18, 0.98);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 4px 0;
+  min-width: 140px;
+  z-index: 100000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.mod-context-header {
+  padding: 6px 12px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--accent-color);
+}
+
+.mod-context-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.mod-context-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mod-context-ban {
+  color: #ef4444;
+}
+
+.mod-context-ban:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
