@@ -24,6 +24,7 @@ export function createCustomControls(
         <input type="range" class="volume-slider" min="0" max="100" value="${videoElement.volume * 100}">
       </div>
       <span class="live-indicator">LIVE</span>
+      <span class="latency-display" title="Click to cycle latency mode"></span>
     </div>
     <div class="controls-section">
       <button class="ctrl-btn clip-btn" title="Record Clip (30s)">
@@ -144,6 +145,45 @@ export function createCustomControls(
   };
 
   videoController.onStats(updateStatsDisplay);
+
+  // === LATENCY DISPLAY ===
+  const latencyDisplay = controlsBar.querySelector('.latency-display') as HTMLElement;
+  const LATENCY_MODES = ['ultra-low', 'balanced', 'stable'] as const;
+  const LATENCY_MODE_LABELS: Record<string, string> = {
+    'ultra-low': 'Ultra Low',
+    'balanced': 'Balanced',
+    'stable': 'Stable',
+  };
+  let currentLatencyMode = 'balanced';
+
+  // Load current latency mode
+  chrome.storage.sync.get(['latencyMode', 'lowLatency'], (data) => {
+    if (data.latencyMode) {
+      currentLatencyMode = data.latencyMode;
+    } else {
+      currentLatencyMode = data.lowLatency !== false ? 'balanced' : 'stable';
+    }
+  });
+
+  const updateLatencyDisplay = (stats: StreamStats) => {
+    const latency = stats.latency;
+    let color = '#10b981'; // green
+    if (latency >= 5) color = '#ef4444'; // red
+    else if (latency >= 2) color = '#f59e0b'; // yellow
+
+    latencyDisplay.style.color = color;
+    latencyDisplay.textContent = latency > 0 ? `${latency.toFixed(1)}s` : '';
+    latencyDisplay.title = `Latency: ${latency.toFixed(1)}s — Mode: ${LATENCY_MODE_LABELS[currentLatencyMode] || currentLatencyMode}\nClick to cycle`;
+  };
+
+  videoController.onStats(updateLatencyDisplay);
+
+  latencyDisplay.addEventListener('click', () => {
+    const currentIdx = LATENCY_MODES.indexOf(currentLatencyMode as any);
+    const nextIdx = (currentIdx + 1) % LATENCY_MODES.length;
+    currentLatencyMode = LATENCY_MODES[nextIdx];
+    videoController.setLatencyMode(currentLatencyMode);
+  });
 
   videoContainer.appendChild(controlsBar);
   videoContainer.appendChild(settingsModal);

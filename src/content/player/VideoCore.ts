@@ -119,13 +119,14 @@ export function attachVideo(
 
       const mediaSourceUrl = response.url;
 
-      // Load low-latency preference
+      // Load latency mode preference
       const settings = await new Promise<Record<string, any>>((resolve) => {
-        chrome.storage.sync.get(['lowLatency'], (data) => {
+        chrome.storage.sync.get(['latencyMode', 'lowLatency'], (data) => {
           resolve(data);
         });
       });
-      const lowLatency = settings.lowLatency !== false; // default true
+      // Migrate from old boolean to tri-state
+      const latencyMode: string = settings.latencyMode || (settings.lowLatency !== false ? 'balanced' : 'stable');
 
       if (Hls.isSupported()) {
         // Ad bypass playlist loader
@@ -160,20 +161,8 @@ export function attachVideo(
         }
 
         const hlsConfig: Partial<typeof Hls.DefaultConfig> = {
-          maxLiveSyncPlaybackRate: 1.5,
           pLoader: AdBypassPlaylistLoader as any,
-          // Low-latency settings
-          ...(lowLatency
-            ? {
-                liveSyncDurationCount: 2,
-                liveMaxLatencyDurationCount: 5,
-                lowLatencyMode: true,
-                backBufferLength: 30,
-              }
-            : {
-                liveSyncDurationCount: 5,
-                liveMaxLatencyDurationCount: 15,
-              }),
+          ...getLatencyConfig(latencyMode),
         };
 
         hlsInstance = new Hls(hlsConfig);
@@ -410,12 +399,16 @@ export function attachVideo(
 
     isRecording: () => mediaRecorder !== null && mediaRecorder.state === 'recording',
 
-    setLowLatency: (enabled: boolean) => {
+    setLatencyMode: (mode: string) => {
       if (!hlsInstance) return;
-      hlsInstance.config.liveSyncDurationCount = enabled ? 2 : 5;
-      hlsInstance.config.liveMaxLatencyDurationCount = enabled ? 5 : 15;
-      (hlsInstance.config as any).lowLatencyMode = enabled;
-      chrome.storage.sync.set({ lowLatency: enabled });
+      const config = getLatencyConfig(mode);
+      hlsInstance.config.liveSyncDurationCount = config.liveSyncDurationCount!;
+      hlsInstance.config.liveMaxLatencyDurationCount = config.liveMaxLatencyDurationCount!;
+      (hlsInstance.config as any).lowLatencyMode = config.lowLatencyMode ?? false;
+      if (config.maxLiveSyncPlaybackRate !== undefined) {
+        hlsInstance.config.maxLiveSyncPlaybackRate = config.maxLiveSyncPlaybackRate;
+      }
+      chrome.storage.sync.set({ latencyMode: mode });
     },
 
     cleanup: () => {
@@ -440,6 +433,34 @@ export function attachVideo(
   return controller;
 }
 
+function getLatencyConfig(mode: string): Partial<typeof Hls.DefaultConfig> {
+  switch (mode) {
+    case 'ultra-low':
+      return {
+        liveSyncDurationCount: 1,
+        liveMaxLatencyDurationCount: 3,
+        lowLatencyMode: true,
+        maxLiveSyncPlaybackRate: 1.5,
+        backBufferLength: 30,
+      };
+    case 'stable':
+      return {
+        liveSyncDurationCount: 6,
+        liveMaxLatencyDurationCount: 20,
+        lowLatencyMode: false,
+      };
+    case 'balanced':
+    default:
+      return {
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 8,
+        lowLatencyMode: true,
+        maxLiveSyncPlaybackRate: 1.2,
+        backBufferLength: 30,
+      };
+  }
+}
+
 function buildQualityName(level: { height: number; bitrate: number; attrs?: Record<string, any> }): string {
   if (level.attrs?.NAME) return level.attrs.NAME as string;
   if (level.height === 0 || level.bitrate < 200000) return 'Audio Only';
@@ -457,6 +478,6 @@ export interface VideoController {
   startClip: () => Promise<Blob | null>;
   stopClip: () => void;
   isRecording: () => boolean;
-  setLowLatency: (enabled: boolean) => void;
+  setLatencyMode: (mode: string) => void;
   cleanup: () => void;
 }
