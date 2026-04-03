@@ -4,10 +4,7 @@
  * Only shows mod tools if user has mod badges in the channel.
  */
 
-import { TWITCH_CLIENT_ID } from '../../background/twitch-api';
-
 const OAUTH_SCOPES = 'chat:edit channel:moderate moderator:manage:chat_messages';
-const OAUTH_REDIRECT = 'https://localhost/callback'; // Extension callback
 
 interface ModToolsConfig {
   accessToken: string | null;
@@ -308,12 +305,26 @@ export class ModTools {
     this.chatContainer.addEventListener('contextmenu', this.contextMenuHandler);
   }
 
-  private startOAuth(): void {
-    // Build OAuth URL
-    const redirectUri = chrome.identity?.getRedirectURL?.() || OAUTH_REDIRECT;
-    const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${TWITCH_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(OAUTH_SCOPES)}`;
+  private async startOAuth(): Promise<void> {
+    // Get custom client ID from storage
+    const data = await new Promise<Record<string, any>>((resolve) => {
+      chrome.storage.local.get(['modClientId'], (d) => resolve(d));
+    });
 
-    // Use chrome.identity.launchWebAuthFlow if available (MV3)
+    const clientId = data.modClientId;
+    if (!clientId) {
+      this.showSetupInstructions();
+      return;
+    }
+
+    const redirectUri = chrome.identity?.getRedirectURL?.() || '';
+    if (!redirectUri) {
+      this.showModToast('chrome.identity API not available');
+      return;
+    }
+
+    const authUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(OAUTH_SCOPES)}&force_verify=true`;
+
     if (chrome.identity?.launchWebAuthFlow) {
       chrome.identity.launchWebAuthFlow(
         { url: authUrl, interactive: true },
@@ -326,10 +337,54 @@ export class ModTools {
         }
       );
     } else {
-      // Fallback: open popup
       window.open(authUrl, '_blank', 'width=500,height=700');
       this.showModToast('Complete authentication in the popup window');
     }
+  }
+
+  private showSetupInstructions(): void {
+    if (!this.panel) return;
+    const redirectUrl = chrome.identity?.getRedirectURL?.() || '(unavailable)';
+
+    this.panel.innerHTML = `
+      <div class="mod-panel-header">
+        <span class="mod-panel-title">Mod Tools Setup</span>
+        <button class="mod-panel-close panel-close-btn" tabindex="0" aria-label="Close">&times;</button>
+      </div>
+      <div class="mod-panel-content">
+        <p class="mod-panel-info">Mod tools require a Twitch Developer application.</p>
+        <ol class="mod-setup-steps">
+          <li>Go to <a href="https://dev.twitch.tv/console/apps" target="_blank" style="color:var(--accent-color)">dev.twitch.tv</a> and create an app</li>
+          <li>Set the OAuth Redirect URL to:<br>
+            <code class="mod-redirect-url">${this.escapeHtml(redirectUrl)}</code>
+          </li>
+          <li>Copy your Client ID and paste it below</li>
+        </ol>
+        <div class="mod-setup-input-wrapper">
+          <input type="text" class="mod-setup-input" placeholder="Paste Client ID..." maxlength="60" aria-label="Twitch App Client ID">
+          <button class="mod-setup-save" aria-label="Save Client ID">Save</button>
+        </div>
+      </div>
+    `;
+
+    this.panel.querySelector('.mod-panel-close')?.addEventListener('click', () => {
+      this.panel?.classList.remove('active');
+    });
+
+    const input = this.panel.querySelector('.mod-setup-input') as HTMLInputElement;
+    const saveBtn = this.panel.querySelector('.mod-setup-save');
+
+    const save = () => {
+      const id = input?.value.trim();
+      if (!id) return;
+      chrome.storage.local.set({ modClientId: id }, () => {
+        this.showModToast('Client ID saved — click Connect again');
+        this.renderPanel();
+      });
+    };
+
+    saveBtn?.addEventListener('click', save);
+    input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') save(); });
   }
 
   private async handleOAuthCallback(url: string): Promise<void> {
@@ -401,8 +456,14 @@ export class ModTools {
     if (!this.config.accessToken) return;
 
     try {
+      // Use the stored mod client ID
+      const storedData = await new Promise<Record<string, any>>((resolve) => {
+        chrome.storage.local.get(['modClientId'], (d) => resolve(d));
+      });
+      const clientId = storedData.modClientId || '';
+
       const headers: Record<string, string> = {
-        'Client-ID': TWITCH_CLIENT_ID,
+        'Client-ID': clientId,
         'Content-Type': 'application/json',
       };
       if (this.deviceId) {

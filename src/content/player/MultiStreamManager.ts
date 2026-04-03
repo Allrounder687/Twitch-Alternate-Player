@@ -89,6 +89,7 @@ export class MultiStreamManager {
     const dialog = document.createElement('div');
     dialog.className = 'multi-stream-dialog';
     dialog.innerHTML = `
+      <button class="panel-close-btn multi-stream-dialog-close" aria-label="Close">&times;</button>
       <input type="text" class="multi-stream-input" placeholder="Enter channel name..." maxlength="25" aria-label="Channel name for multi-stream">
       <button class="multi-stream-go-btn" aria-label="Add stream">Go</button>
     `;
@@ -108,6 +109,7 @@ export class MultiStreamManager {
     };
 
     goBtn.addEventListener('click', submit);
+    dialog.querySelector('.multi-stream-dialog-close')?.addEventListener('click', () => dialog.remove());
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') submit();
       if (e.key === 'Escape') dialog.remove();
@@ -173,8 +175,22 @@ export class MultiStreamManager {
     // Insert cell into the grid area
     this.getOrCreateGrid().appendChild(cell);
 
+    // Play/pause toggle button
+    const playPauseBtn = document.createElement('button');
+    playPauseBtn.className = 'multi-stream-playpause';
+    playPauseBtn.innerHTML = '&#9646;&#9646;'; // pause icon (default playing)
+    playPauseBtn.title = 'Play/Pause';
+    playPauseBtn.tabIndex = 0;
+    playPauseBtn.setAttribute('aria-label', `Play or pause ${channel}`);
+    overlay.insertBefore(playPauseBtn, volumeSlider);
+
     // Initialize HLS
     const controller = attachVideo(video, channel, loader, errorMsg);
+
+    // Explicitly play once data is ready (Chrome autoplay policy)
+    video.addEventListener('canplay', () => {
+      video.play().catch(() => {});
+    }, { once: true });
 
     const streamCell: StreamCell = {
       channel,
@@ -185,6 +201,19 @@ export class MultiStreamManager {
       index,
     };
     this.cells.push(streamCell);
+
+    // Play/pause button handler
+    const updatePlayPauseIcon = () => {
+      playPauseBtn.innerHTML = video.paused ? '&#9654;' : '&#9646;&#9646;';
+    };
+    playPauseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (video.paused) video.play().catch(() => {});
+      else video.pause();
+      updatePlayPauseIcon();
+    });
+    video.addEventListener('play', updatePlayPauseIcon);
+    video.addEventListener('pause', updatePlayPauseIcon);
 
     // Event listeners
     closeBtn.addEventListener('click', (e) => {

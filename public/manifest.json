@@ -51,7 +51,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["inject.js", "popout.html"],
+      "resources": ["inject.js"],
       "matches": ["*://*.twitch.tv/*"]
     }
   ]

@@ -9,6 +9,7 @@ module.exports = (env, argv) => ({
     popup: './src/popup/index.tsx',
     content: './src/content/index.ts',
     background: './src/background/index.ts',
+    popout: './src/popout/index.ts',
   },
   output: {
     path: path.resolve(__dirname, 'dist'),

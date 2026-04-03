@@ -1,5 +1,6 @@
 import type { VideoController, HlsQualityLevel, StreamStats } from './VideoCore';
 import { LAYOUT_PRESETS, PRESET_NAMES, applyLayoutPreset } from './LayoutPresets';
+import { THEME_PRESETS, THEME_PRESET_NAMES, ThemeManager, type ThemeConfig } from './ThemeManager';
 
 export function createCustomControls(
   videoContainer: HTMLElement,
@@ -45,6 +46,9 @@ export function createCustomControls(
       <button class="ctrl-btn switch-default-btn" title="Return to Twitch Player" tabindex="0" aria-label="Switch to default Twitch player">Default Player</button>
       <button class="ctrl-btn chat-toggle-btn" title="Toggle Chat" tabindex="0" aria-label="Toggle chat sidebar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+      </button>
+      <button class="ctrl-btn theme-btn" title="Theme" tabindex="0" aria-label="Change player theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M12 2a10 10 0 0 0 0 20c.6 0 1-.4 1-1v-1.5c0-.4-.2-.8-.5-1-.3-.3-.5-.7-.5-1.2 0-.8.7-1.5 1.5-1.5H16a5.5 5.5 0 0 0 5.5-5.5A10 10 0 0 0 12 2z"/><circle cx="7.5" cy="11.5" r="1.5" fill="currentColor"/><circle cx="10.5" cy="7.5" r="1.5" fill="currentColor"/><circle cx="15.5" cy="7.5" r="1.5" fill="currentColor"/></svg>
       </button>
       <button class="ctrl-btn layout-btn" title="Layout Preset" tabindex="0" aria-label="Change layout preset">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -99,11 +103,17 @@ export function createCustomControls(
     qualityOptionsHtml += `<div class="quality-option ${currentQuality === 'audio_only' ? 'selected' : ''}" data-quality="audio_only" data-level="-1">Audio Only</div>`;
 
     settingsModal.innerHTML = `
+      <button class="panel-close-btn settings-close-btn" aria-label="Close quality menu">&times;</button>
       <div class="settings-group">
         <span class="settings-label">Quality</span>
         <div class="quality-list">${qualityOptionsHtml}</div>
       </div>
     `;
+
+    settingsModal.querySelector('.settings-close-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      settingsModal.classList.remove('active');
+    });
 
     // Attach listeners
     settingsModal.querySelectorAll('.quality-option').forEach((opt) => {
@@ -144,10 +154,16 @@ export function createCustomControls(
   let currentLayout = 'balanced';
 
   const updateLayoutDropdown = () => {
-    layoutDropdown.innerHTML = PRESET_NAMES.map((name) => {
+    layoutDropdown.innerHTML = `<button class="panel-close-btn layout-close-btn" aria-label="Close layout menu">&times;</button>` +
+    PRESET_NAMES.map((name) => {
       const preset = LAYOUT_PRESETS[name];
       return `<div class="layout-option ${name === currentLayout ? 'selected' : ''}" data-layout="${name}">${preset.label}</div>`;
     }).join('');
+
+    layoutDropdown.querySelector('.layout-close-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      layoutDropdown.classList.remove('active');
+    });
 
     layoutDropdown.querySelectorAll('.layout-option').forEach((opt) => {
       opt.addEventListener('click', () => {
@@ -167,6 +183,46 @@ export function createCustomControls(
     // Apply on load
     const host = videoContainer.closest('#kreo-twitch-player-host') as HTMLElement;
     if (host) applyLayoutPreset(host, chatContainer, currentLayout);
+  });
+
+  // === THEME PICKER DROPDOWN ===
+  const themeDropdown = document.createElement('div');
+  themeDropdown.className = 'theme-dropdown';
+  let currentThemePreset = 'twitch-dark';
+
+  const updateThemeDropdown = () => {
+    themeDropdown.innerHTML = `<button class="panel-close-btn theme-close-btn" aria-label="Close theme menu">&times;</button>` +
+    THEME_PRESET_NAMES.map((name) => {
+      const preset = THEME_PRESETS[name];
+      return `<div class="theme-option ${name === currentThemePreset ? 'selected' : ''}" data-theme="${name}">${preset.label}</div>`;
+    }).join('');
+
+    themeDropdown.querySelector('.theme-close-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      themeDropdown.classList.remove('active');
+    });
+
+    themeDropdown.querySelectorAll('.theme-option').forEach((opt) => {
+      opt.addEventListener('click', () => {
+        const name = opt.getAttribute('data-theme') || 'twitch-dark';
+        currentThemePreset = name;
+        const config: ThemeConfig = { preset: name, custom: {} };
+        ThemeManager.saveTheme(config);
+        const host = videoContainer.closest('#kreo-twitch-player-host') as HTMLElement;
+        if (host) {
+          const tm = new ThemeManager(host);
+          tm.applyTheme(config);
+        }
+        updateThemeDropdown();
+        themeDropdown.classList.remove('active');
+      });
+    });
+  };
+
+  chrome.storage.sync.get(['theme'], (data) => {
+    const themeConfig: ThemeConfig = data.theme || { preset: 'twitch-dark', custom: {} };
+    currentThemePreset = themeConfig.preset || 'twitch-dark';
+    updateThemeDropdown();
   });
 
   // === STATS OVERLAY ===
@@ -234,21 +290,20 @@ export function createCustomControls(
 
   const adBlockedHandler = () => {
     adBlockCount++;
-    adShieldIcon.title = `Ad filter — ${adBlockCount} ad segment${adBlockCount > 1 ? 's' : ''} filtered`;
+    adShieldIcon.title = `Ad filter: ${adBlockCount} ad${adBlockCount > 1 ? 's' : ''} filtered`;
 
-    // Pulse animation
+    // Pulse animation + active color
     adShieldIcon.classList.remove('pulse');
+    adShieldIcon.classList.add('ad-shield-active');
     void adShieldIcon.offsetWidth; // force reflow
     adShieldIcon.classList.add('pulse');
 
-    // Show toast if notifications are enabled (toast manager is injected via event)
-    chrome.storage.sync.get(['showAdNotifications'], (data) => {
-      if (data.showAdNotifications !== false) {
-        videoElement.dispatchEvent(new CustomEvent('twitch-show-toast', {
-          detail: { message: 'Ad segment filtered', type: 'info' },
-        }));
-      }
-    });
+    setTimeout(() => adShieldIcon.classList.remove('ad-shield-active'), 2000);
+
+    // Show toast
+    videoElement.dispatchEvent(new CustomEvent('twitch-show-toast', {
+      detail: { message: `Ad segment filtered (${adBlockCount} total)`, type: 'success' },
+    }));
   };
 
   videoElement.addEventListener('twitch-ad-blocked', adBlockedHandler);
@@ -332,6 +387,7 @@ export function createCustomControls(
   videoContainer.appendChild(controlsBar);
   videoContainer.appendChild(settingsModal);
   videoContainer.appendChild(layoutDropdown);
+  videoContainer.appendChild(themeDropdown);
   videoContainer.appendChild(statsOverlay);
   videoContainer.appendChild(ariaAnnouncer);
 
@@ -365,6 +421,7 @@ export function createCustomControls(
   const audioOnlyBtn = controlsBar.querySelector('.audio-only-btn') as HTMLButtonElement;
   const popoutBtn = controlsBar.querySelector('.popout-btn') as HTMLButtonElement;
   const layoutBtn = controlsBar.querySelector('.layout-btn') as HTMLButtonElement;
+  const themeBtn = controlsBar.querySelector('.theme-btn') as HTMLButtonElement;
 
   // === Switch to default player ===
   switchDefaultBtn.addEventListener('click', () => {
@@ -454,6 +511,7 @@ export function createCustomControls(
     e.stopPropagation();
     settingsModal.classList.toggle('active');
     layoutDropdown.classList.remove('active');
+    themeDropdown.classList.remove('active');
   });
 
   const closeSettingsHandler = (e: MouseEvent) => {
@@ -462,6 +520,9 @@ export function createCustomControls(
     }
     if (!layoutDropdown.contains(e.target as Node) && !layoutBtn.contains(e.target as Node)) {
       layoutDropdown.classList.remove('active');
+    }
+    if (!themeDropdown.contains(e.target as Node) && !themeBtn.contains(e.target as Node)) {
+      themeDropdown.classList.remove('active');
     }
   };
   document.addEventListener('click', closeSettingsHandler);
@@ -484,14 +545,21 @@ export function createCustomControls(
     e.stopPropagation();
     layoutDropdown.classList.toggle('active');
     settingsModal.classList.remove('active');
+    themeDropdown.classList.remove('active');
+  });
+
+  // === Theme Picker Toggle ===
+  themeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    themeDropdown.classList.toggle('active');
+    settingsModal.classList.remove('active');
+    layoutDropdown.classList.remove('active');
   });
 
   // === Pop-Out Player ===
   popoutBtn.addEventListener('click', () => {
-    const streamUrl = videoController.getStreamUrl?.() || '';
-    if (!streamUrl) return;
     const popoutUrl = chrome.runtime.getURL(
-      `popout.html?url=${encodeURIComponent(streamUrl)}&channel=${encodeURIComponent(streamerName)}`
+      `popout.html?channel=${encodeURIComponent(streamerName)}`
     );
     window.open(popoutUrl, '_blank', 'width=640,height=360,menubar=no,toolbar=no,location=no,status=no');
   });
