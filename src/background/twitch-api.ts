@@ -3,7 +3,7 @@ export const TWITCH_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko';
 // Generate once per extension install, persist in storage
 let deviceId: string | null = null;
 
-async function getDeviceId(): Promise<string> {
+export async function getDeviceId(): Promise<string> {
   if (deviceId) return deviceId;
 
   const result = await chrome.storage.local.get('twitch_device_id');
@@ -65,8 +65,8 @@ export async function getStreamToken(channelName: string): Promise<StreamToken |
   const data = await response.json();
 
   if (data.errors) {
-    console.error('[TwitchAPI] GQL returned errors:', data.errors);
-    throw new Error(`GQL error: ${data.errors[0].message}`);
+    console.error('[TwitchAPI] GQL returned errors:', JSON.stringify(data.errors));
+    throw new Error(`GQL error: ${data.errors[0]?.message || JSON.stringify(data.errors[0])}`);
   }
 
   if (data.data?.streamPlaybackAccessToken) {
@@ -97,6 +97,8 @@ export function getStreamUrl(channelName: string, token: StreamToken): string {
     player_backend: 'mediaplayer',
     playlist_include_framerate: 'true',
     reassignments_supported: 'true',
+    cdm: 'wv',
+    player_version: '1.30.0',
   });
 
   return `https://usher.ttvnw.net/api/channel/hls/${channelName.toLowerCase()}.m3u8?${params.toString()}`;

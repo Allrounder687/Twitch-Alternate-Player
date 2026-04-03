@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Twitch Player Extension",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "An alternative player for Twitch.tv with enhanced features",
   "permissions": [
     "storage",
@@ -17,7 +17,9 @@
     "https://*.live-video.net/*",
     "https://*.akamaized.net/*",
     "https://*.cloudfront.net/*",
-    "https://eu.luminous.wtf/*"
+    "https://api.betterttv.net/*",
+    "https://api.frankerfacez.com/*",
+    "wss://irc-ws.chat.twitch.tv/*"
   ],
   "background": {
     "service_worker": "background.js",

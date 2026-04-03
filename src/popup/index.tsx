@@ -7,16 +7,19 @@ const App: React.FC = () => {
   const [streamerName, setStreamerName] = useState<string>('');
   const [volume, setVolume] = useState<number>(50);
   const [quality, setQuality] = useState<string>('auto');
+  const [lowLatency, setLowLatency] = useState<boolean>(true);
+  const [chatEnabled, setChatEnabled] = useState<boolean>(true);
 
   useEffect(() => {
-    // Load saved settings
     chrome.storage.sync.get(
-      ['isEnabled', 'streamerName', 'volume', 'quality'],
+      ['isEnabled', 'streamerName', 'volume', 'quality', 'lowLatency', 'chatEnabled'],
       (data) => {
         setIsEnabled(data.isEnabled || false);
         setStreamerName(data.streamerName || '');
         setVolume(data.volume || 50);
         setQuality(data.quality || 'auto');
+        setLowLatency(data.lowLatency !== false);
+        setChatEnabled(data.chatEnabled !== false);
       }
     );
   }, []);
@@ -25,16 +28,12 @@ const App: React.FC = () => {
     const newState = !isEnabled;
     setIsEnabled(newState);
     chrome.storage.sync.set({ isEnabled: newState });
-    
-    // Send message to content script to toggle the player
+
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0].id) {
-        chrome.tabs.sendMessage(tabs[0].id, { 
-          action: 'TOGGLE_PLAYER', 
+      if (tabs[0]?.id) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          action: 'TOGGLE_PLAYER',
           isEnabled: newState,
-          streamerName,
-          volume,
-          quality
         });
       }
     });
@@ -58,55 +57,91 @@ const App: React.FC = () => {
     chrome.storage.sync.set({ quality: newQuality });
   };
 
+  const handleLowLatencyToggle = () => {
+    const newState = !lowLatency;
+    setLowLatency(newState);
+    chrome.storage.sync.set({ lowLatency: newState });
+  };
+
+  const handleChatToggle = () => {
+    const newState = !chatEnabled;
+    setChatEnabled(newState);
+    chrome.storage.sync.set({ chatEnabled: newState });
+  };
+
   return (
     <div className="app">
       <header>
         <h1>Twitch Player</h1>
         <label className="switch">
-          <input 
-            type="checkbox" 
-            checked={isEnabled} 
-            onChange={handleToggle} 
-          />
+          <input type="checkbox" checked={isEnabled} onChange={handleToggle} />
           <span className="slider round"></span>
         </label>
       </header>
-      
+
       <div className="settings">
         <div className="form-group">
-          <label>Streamer Name:</label>
-          <input 
-            type="text" 
+          <label>Streamer Name</label>
+          <input
+            type="text"
             value={streamerName}
             onChange={handleStreamerChange}
             placeholder="Enter streamer name"
           />
         </div>
-        
+
         <div className="form-group">
           <label>Volume: {volume}%</label>
-          <input 
-            type="range" 
-            min="0" 
-            max="100" 
+          <input
+            type="range"
+            min="0"
+            max="100"
             value={volume}
             onChange={handleVolumeChange}
           />
         </div>
-        
+
         <div className="form-group">
-          <label>Quality:</label>
+          <label>Quality</label>
           <select value={quality} onChange={handleQualityChange}>
             <option value="auto">Auto</option>
-            <option value="1080p">1080p</option>
-            <option value="720p">720p</option>
-            <option value="480p">480p</option>
-            <option value="360p">360p</option>
-            <option value="160p">160p</option>
+            <option value="1080p60">1080p60</option>
+            <option value="720p60">720p60</option>
+            <option value="480p30">480p</option>
+            <option value="360p30">360p</option>
+            <option value="audio_only">Audio Only</option>
           </select>
         </div>
+
+        <div className="form-group toggle-row">
+          <label>Low Latency</label>
+          <label className="switch small">
+            <input type="checkbox" checked={lowLatency} onChange={handleLowLatencyToggle} />
+            <span className="slider round"></span>
+          </label>
+        </div>
+
+        <div className="form-group toggle-row">
+          <label>Chat Sidebar</label>
+          <label className="switch small">
+            <input type="checkbox" checked={chatEnabled} onChange={handleChatToggle} />
+            <span className="slider round"></span>
+          </label>
+        </div>
       </div>
-      
+
+      <div className="shortcuts-info">
+        <span className="shortcuts-label">Shortcuts</span>
+        <div className="shortcut-grid">
+          <span>Space</span><span>Play/Pause</span>
+          <span>M</span><span>Mute</span>
+          <span>F</span><span>Fullscreen</span>
+          <span>T</span><span>Theater</span>
+          <span>J / L</span><span>-10s / +10s</span>
+          <span>&uarr; / &darr;</span><span>Volume</span>
+        </div>
+      </div>
+
       <div className={`status ${isEnabled ? 'active' : ''}`}>
         {isEnabled ? 'Player is enabled' : 'Player is disabled'}
       </div>
@@ -114,10 +149,7 @@ const App: React.FC = () => {
   );
 };
 
-const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
-);
-
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 root.render(
   <React.StrictMode>
     <App />
