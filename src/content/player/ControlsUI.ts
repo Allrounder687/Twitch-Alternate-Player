@@ -251,9 +251,11 @@ export function createCustomControls(
   });
 
   // === Fullscreen ===
+  // Use the top-level host so both video AND chat are inside the fullscreen element
+  const fullscreenTarget = videoContainer.closest('#kreo-twitch-player-host') || videoContainer;
   fullscreenBtn.addEventListener('click', () => {
     if (!document.fullscreenElement) {
-      videoContainer.requestFullscreen().catch(() => {});
+      fullscreenTarget.requestFullscreen().catch(() => {});
     } else {
       document.exitFullscreen();
     }

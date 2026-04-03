@@ -520,6 +520,27 @@ video {
   opacity: 1;
 }
 
+/* Fullscreen: host is the fullscreen element so chat sidebar is included */
+#kreo-twitch-player-host:fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  display: flex;
+}
+
+#kreo-twitch-player-host:fullscreen .video-container {
+  flex: 1;
+  min-width: 0;
+}
+
+#kreo-twitch-player-host:fullscreen .chat-container {
+  width: 340px;
+  flex-shrink: 0;
+}
+
+#kreo-twitch-player-host:fullscreen .chat-container.hidden {
+  display: none;
+}
+
 /* Theater mode fallback (when native Twitch button not found) */
 #kreo-twitch-player-host.theater-mode {
   position: fixed !important;
