@@ -96,9 +96,25 @@ export function attachVideo(
         hlsInstance.loadSource(mediaSourceUrl);
         hlsInstance.attachMedia(videoElement);
 
-        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
           if (!isDestroyed) {
             hideLoader();
+
+            // Instantly start at the highest quality by default (instead of lowest)
+            let highestLevel = -1;
+            let maxHeight = 0;
+            data.levels.forEach((l, index) => {
+              if (l.height > maxHeight) {
+                maxHeight = l.height;
+                highestLevel = index;
+              }
+            });
+
+            if (highestLevel !== -1 && hlsInstance) {
+              hlsInstance.startLevel = highestLevel;   // Sets the initial ABR algorithm level
+              hlsInstance.nextLoadLevel = highestLevel; // Forces the very first chunk to fetch at high-res
+            }
+
             videoElement.play().catch(() => {
               // Fail-safe: try to play muted if autoplay is blocked
               videoElement.muted = true;
