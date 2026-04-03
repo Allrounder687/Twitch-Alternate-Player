@@ -24,6 +24,9 @@ export function createCustomControls(
     </div>
     <div class="controls-section">
       <button class="ctrl-btn switch-default-btn" title="Return to Twitch Player">Default Player</button>
+      <button class="ctrl-btn chat-toggle-btn" title="Toggle Chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+      </button>
       <button class="ctrl-btn settings-btn" title="Settings">Quality</button>
       <button class="ctrl-btn fullscreen-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
@@ -116,6 +119,12 @@ export function createCustomControls(
     updateVolumeIcon();
   });
 
+
+  // Chat Toggling
+  const chatToggle = controlsBar.querySelector('.chat-toggle-btn') as HTMLButtonElement;
+  chatToggle.addEventListener('click', () => {
+    chatContainer.classList.toggle('hidden');
+  });
 
   // Fullscreen
   fullscreenBtn.addEventListener('click', () => {

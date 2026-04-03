@@ -64,12 +64,19 @@ export class PlayerContainer {
     videoContainer.appendChild(loader);
     videoContainer.appendChild(errorMsg);
 
+    // Chat Container (overlay)
+    const chatContainer = document.createElement('div');
+    chatContainer.className = 'chat-container hidden';
+    chatContainer.innerHTML = `
+      <iframe src="https://www.twitch.tv/embed/${streamerName}/chat?parent=${window.location.hostname}&darkpopout" width="100%" height="100%" frameborder="0"></iframe>
+    `;
+
     this.container.appendChild(videoContainer);
+    this.container.appendChild(chatContainer);
     target.appendChild(this.container);
 
     // Initialize custom UI
-    // Pass a dummy div for chat since we use native chat now
-    const controls = createCustomControls(videoContainer, video, streamerName, quality, document.createElement('div'), () => this.unmount());
+    const controls = createCustomControls(videoContainer, video, streamerName, quality, chatContainer, () => this.unmount());
     this.controlsCleanup = controls.cleanup;
 
     // Trigger animation
