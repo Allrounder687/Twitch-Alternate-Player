@@ -150,6 +150,21 @@ export function createCustomControls(
     volSlider.value = (videoElement.volume * 100).toString();
   });
 
+  // Wheel Volume Control
+  const wheelHandler = (e: WheelEvent) => {
+    if (e.deltaY === 0) return;
+    e.preventDefault();
+    const step = 0.05;
+    const delta = e.deltaY > 0 ? -step : step;
+    const nextVolume = Math.max(0, Math.min(1, videoElement.volume + delta));
+    videoElement.volume = nextVolume;
+    videoElement.muted = nextVolume === 0;
+    
+    // Save to storage (throttled implicitly by user interaction speed)
+    chrome.storage.sync.set({ volume: Math.round(nextVolume * 100) });
+  };
+  videoContainer.addEventListener('wheel', wheelHandler, { passive: false });
+
   updateVolumeIcon();
 
 

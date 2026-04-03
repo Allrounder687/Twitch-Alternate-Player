@@ -10,6 +10,7 @@ export class PlayerContainer {
   private baseVideoInterval: number | null = null;
   private controlsCleanup: (() => void) | null = null;
   private originalStates = new Map<HTMLVideoElement, { muted: boolean, paused: boolean }>();
+  private observer: IntersectionObserver | null = null;
 
   public mount(streamerName: string, volume: number = 50, quality: string = 'auto') {
     if (this.container) {
@@ -71,8 +72,18 @@ export class PlayerContainer {
       <iframe src="https://www.twitch.tv/embed/${streamerName}/chat?parent=${window.location.hostname}&darkpopout" width="100%" height="100%" frameborder="0"></iframe>
     `;
 
+    // Mini Close Button
+    const miniClose = document.createElement('button');
+    miniClose.className = 'mini-close-btn';
+    miniClose.innerText = 'Close Mini';
+    miniClose.onclick = (e) => {
+      e.stopPropagation();
+      this.container?.classList.remove('mini-mode');
+    };
+
     this.container.appendChild(videoContainer);
     this.container.appendChild(chatContainer);
+    this.container.appendChild(miniClose);
     target.appendChild(this.container);
 
     // Initialize custom UI
@@ -86,6 +97,20 @@ export class PlayerContainer {
 
     // Attach HLS logic
     this.videoCoreCleanup = attachVideo(video, streamerName, loader, errorMsg);
+
+    // Setup Sticky Mini-mode Observer
+    this.observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        // If the main player area is mostly out of view, go mini
+        if (entry.intersectionRatio < 0.1 && entry.boundingClientRect.top < 0) {
+           this.container?.classList.add('mini-mode');
+        } else if (entry.intersectionRatio > 0.5) {
+           this.container?.classList.remove('mini-mode');
+        }
+      });
+    }, { threshold: [0.1, 0.5] });
+    
+    this.observer.observe(target);
 
     this.startBaseVideoKiller();
   }
@@ -109,6 +134,11 @@ export class PlayerContainer {
   }
 
   public unmount() {
+    if (this.observer) {
+      this.observer.disconnect();
+      this.observer = null;
+    }
+
     if (this.videoCoreCleanup) {
       this.videoCoreCleanup();
       this.videoCoreCleanup = null;
@@ -139,6 +169,7 @@ export class PlayerContainer {
 
     if (this.container) {
       this.container.classList.remove('active');
+      this.container.classList.remove('mini-mode');
       // Wait for fade out
       setTimeout(() => {
         if (this.container) {
