@@ -2,6 +2,7 @@ import './player.css';
 import { attachVideo, VideoController } from './VideoCore';
 import { createCustomControls } from './ControlsUI';
 import { TwitchChat } from './TwitchChat';
+import { ChannelPointsClaimer } from './ChannelPointsClaimer';
 
 export class PlayerContainer {
   private container: HTMLDivElement | null = null;
@@ -13,6 +14,7 @@ export class PlayerContainer {
   private originalStates = new Map<HTMLVideoElement, { muted: boolean; paused: boolean }>();
   private observer: IntersectionObserver | null = null;
   private twitchChat: TwitchChat | null = null;
+  private channelPointsClaimer: ChannelPointsClaimer | null = null;
 
   public mount(streamerName: string, volume: number = 50, quality: string = 'auto') {
     if (this.container) {
@@ -115,6 +117,13 @@ export class PlayerContainer {
     this.twitchChat = new TwitchChat(streamerName, chatContainer);
     this.twitchChat.connect();
 
+    // Initialize Channel Points Claimer
+    chrome.storage.sync.get(['autoClaimPoints'], (data) => {
+      const enabled = data.autoClaimPoints !== false;
+      this.channelPointsClaimer = new ChannelPointsClaimer(enabled);
+      this.channelPointsClaimer.start();
+    });
+
     // Setup Sticky Mini-mode Observer
     this.observer = new IntersectionObserver(
       (entries) => {
@@ -158,6 +167,11 @@ export class PlayerContainer {
     if (this.observer) {
       this.observer.disconnect();
       this.observer = null;
+    }
+
+    if (this.channelPointsClaimer) {
+      this.channelPointsClaimer.destroy();
+      this.channelPointsClaimer = null;
     }
 
     if (this.twitchChat) {
