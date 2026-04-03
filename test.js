@@ -1,4 +1,4 @@
-const TWITCH_CLIENT_ID = 'ue6666qo983tsx6so1t0vnawi233wa';
+const TWITCH_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko';
 
 const query = `
   query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $playerType: String!) {
@@ -15,6 +15,7 @@ fetch('https://gql.twitch.tv/gql', {
   headers: {
     'Client-ID': TWITCH_CLIENT_ID,
     'Content-Type': 'application/json',
+    'X-Device-Id': 'test-device-id-12345',
   },
   body: JSON.stringify({
     operationName: 'PlaybackAccessToken_Template',
@@ -22,10 +23,10 @@ fetch('https://gql.twitch.tv/gql', {
     variables: {
       isLive: true,
       login: 'shroud',
-      playerType: "embed"
-    }
-  })
+      playerType: 'site',
+    },
+  }),
 })
-.then(r => r.json().then(data => ({status: r.status, data})))
-.then(res => console.log(JSON.stringify(res, null, 2)))
-.catch(e => console.error(e));
+  .then((r) => r.json().then((data) => ({ status: r.status, data })))
+  .then((res) => console.log(JSON.stringify(res, null, 2)))
+  .catch((e) => console.error('Fetch error:', e.message || String(e)));

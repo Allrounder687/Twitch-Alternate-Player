@@ -1,43 +1,44 @@
 import './player.css';
-import { attachVideo } from './VideoCore';
+import { attachVideo, VideoInstance } from './VideoCore';
 import { createCustomControls } from './ControlsUI';
+import { ChatPanel } from './ChatPanel';
 
 export class PlayerContainer {
   private container: HTMLDivElement | null = null;
-  private videoCoreCleanup: (() => void) | null = null;
+  private videoInstance: VideoInstance | null = null;
   private videoElement: HTMLVideoElement | null = null;
-  private adBlockCallback: (() => void) | null = null;
-  private baseVideoInterval: number | null = null;
   private controlsCleanup: (() => void) | null = null;
-  private originalStates = new Map<HTMLVideoElement, { muted: boolean, paused: boolean }>();
+  private originalStates = new Map<HTMLVideoElement, { muted: boolean; paused: boolean }>();
   private observer: IntersectionObserver | null = null;
+  private baseVideoInterval: number | null = null;
+  private chatPanel: ChatPanel | null = null;
+  private theaterMode = false;
+  private target: HTMLElement | null = null;
 
   public mount(streamerName: string, volume: number = 50, quality: string = 'auto') {
     if (this.container) {
       this.unmount();
     }
 
-    // Identifiers for Twitch player containers
     const playerSelectors = [
       '.video-player__container',
       '.highwind-video-player',
-      '[data-a-target="player-container"]'
+      '[data-a-target="player-container"]',
     ];
-    
-    let target: HTMLElement | null = null;
+
+    this.target = null;
     for (const selector of playerSelectors) {
-      target = document.querySelector(selector) as HTMLElement;
-      if (target) break;
+      this.target = document.querySelector(selector) as HTMLElement;
+      if (this.target) break;
     }
 
-    if (!target) {
+    if (!this.target) {
       console.error('[Alt Player] Could not find Twitch player container to overlay');
       return;
     }
 
-    // Ensure the target is relative so our absolute host fills it
-    if (getComputedStyle(target).position === 'static') {
-      target.style.position = 'relative';
+    if (getComputedStyle(this.target).position === 'static') {
+      this.target.style.position = 'relative';
     }
 
     // Main overlay wrapper
@@ -48,16 +49,16 @@ export class PlayerContainer {
     const videoContainer = document.createElement('div');
     videoContainer.className = 'video-container';
 
-    // Video Element
+    // Video element
     const video = document.createElement('video');
     this.videoElement = video;
     video.autoplay = true;
     video.volume = volume / 100;
-    
-    // Loaders and Error
+
+    // Loader and error
     const loader = document.createElement('div');
     loader.className = 'loader active';
-    
+
     const errorMsg = document.createElement('div');
     errorMsg.className = 'error-msg';
 
@@ -65,14 +66,11 @@ export class PlayerContainer {
     videoContainer.appendChild(loader);
     videoContainer.appendChild(errorMsg);
 
-    // Chat Container (overlay)
+    // Chat container — uses IRC WebSocket chat with BTTV/FFZ emotes
     const chatContainer = document.createElement('div');
     chatContainer.className = 'chat-container hidden';
-    chatContainer.innerHTML = `
-      <iframe src="https://www.twitch.tv/embed/${streamerName}/chat?parent=${window.location.hostname}&darkpopout" width="100%" height="100%" frameborder="0"></iframe>
-    `;
 
-    // Mini Close Button
+    // Mini close button
     const miniClose = document.createElement('button');
     miniClose.className = 'mini-close-btn';
     miniClose.innerText = 'Close Mini';
@@ -84,10 +82,25 @@ export class PlayerContainer {
     this.container.appendChild(videoContainer);
     this.container.appendChild(chatContainer);
     this.container.appendChild(miniClose);
-    target.appendChild(this.container);
+    this.target.appendChild(this.container);
 
-    // Initialize custom UI
-    const controls = createCustomControls(videoContainer, video, streamerName, quality, chatContainer, () => this.unmount());
+    // Initialize IRC chat panel inside chatContainer
+    this.chatPanel = new ChatPanel(chatContainer, streamerName);
+
+    // Attach HLS video logic (with all new features)
+    this.videoInstance = attachVideo(video, videoContainer, streamerName, loader, errorMsg);
+
+    // Initialize custom UI controls
+    const controls = createCustomControls(
+      videoContainer,
+      video,
+      streamerName,
+      quality,
+      chatContainer,
+      this.videoInstance,
+      () => this.unmount(),
+      () => this.toggleTheater()
+    );
     this.controlsCleanup = controls.cleanup;
 
     // Trigger animation
@@ -95,42 +108,81 @@ export class PlayerContainer {
       if (this.container) this.container.classList.add('active');
     });
 
-    // Attach HLS logic
-    this.videoCoreCleanup = attachVideo(video, streamerName, loader, errorMsg);
-
     // Setup Sticky Mini-mode Observer
-    this.observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        // If the main player area is mostly out of view, go mini
-        if (entry.intersectionRatio < 0.1) {
-           this.container?.classList.add('mini-mode');
-        } else if (entry.intersectionRatio > 0.5) {
-           this.container?.classList.remove('mini-mode');
-        }
-      });
-    }, { threshold: [0.1, 0.5] });
-    
-    this.observer.observe(target);
+    this.observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (this.theaterMode) return; // Don't mini in theater mode
+          if (entry.intersectionRatio < 0.1) {
+            this.container?.classList.add('mini-mode');
+          } else if (entry.intersectionRatio > 0.5) {
+            this.container?.classList.remove('mini-mode');
+          }
+        });
+      },
+      { threshold: [0.1, 0.5] }
+    );
 
+    this.observer.observe(this.target);
     this.startBaseVideoKiller();
+  }
+
+  private toggleTheater() {
+    this.theaterMode = !this.theaterMode;
+
+    if (this.theaterMode) {
+      document.body.classList.add('alt-player-theater');
+      this.container?.classList.add('theater-mode');
+      // Also try to click native Twitch theater button for layout integration
+      const nativeSelectors = [
+        '[data-a-target="player-theatre-mode-button"]',
+        '[data-a-target="right-control-theater-mode-button"]',
+        'button[aria-label*="Theatre"]',
+        'button[aria-label*="Theater"]',
+      ];
+      for (const s of nativeSelectors) {
+        const btn = document.querySelector(s) as HTMLElement;
+        if (btn) {
+          btn.click();
+          break;
+        }
+      }
+    } else {
+      document.body.classList.remove('alt-player-theater');
+      this.container?.classList.remove('theater-mode');
+      // Try to exit native theater too
+      const nativeSelectors = [
+        '[data-a-target="player-theatre-mode-button"]',
+        '[data-a-target="right-control-theater-mode-button"]',
+        'button[aria-label*="Theatre"]',
+        'button[aria-label*="Theater"]',
+      ];
+      for (const s of nativeSelectors) {
+        const btn = document.querySelector(s) as HTMLElement;
+        if (btn) {
+          btn.click();
+          break;
+        }
+      }
+    }
   }
 
   private startBaseVideoKiller() {
     this.baseVideoInterval = window.setInterval(() => {
       const allVideos = document.querySelectorAll('video');
-      allVideos.forEach(vid => {
-        if (vid === this.videoElement) return; // Skip our own player
-
+      allVideos.forEach((vid) => {
+        if (vid === this.videoElement) return;
         if (!this.originalStates.has(vid)) {
           this.originalStates.set(vid, { muted: vid.muted, paused: vid.paused });
         }
-
         try {
           if (!vid.paused) vid.pause();
           if (!vid.muted) vid.muted = true;
-        } catch(e) {}
+        } catch {
+          // Ignore cross-origin errors
+        }
       });
-    }, 1000); // Re-check every second in case Twitch tries to unpause it
+    }, 1000);
   }
 
   public unmount() {
@@ -139,15 +191,14 @@ export class PlayerContainer {
       this.observer = null;
     }
 
-    if (this.videoCoreCleanup) {
-      this.videoCoreCleanup();
-      this.videoCoreCleanup = null;
+    if (this.videoInstance) {
+      this.videoInstance.cleanup();
+      this.videoInstance = null;
     }
 
-    if (this.videoElement && this.adBlockCallback) {
-      this.videoElement.removeEventListener('twitch-ad-blocked', this.adBlockCallback);
-      this.videoElement = null;
-      this.adBlockCallback = null;
+    if (this.chatPanel) {
+      this.chatPanel.destroy();
+      this.chatPanel = null;
     }
 
     if (this.controlsCleanup) {
@@ -162,15 +213,23 @@ export class PlayerContainer {
         try {
           vid.muted = state.muted;
           if (!state.paused) vid.play().catch(() => {});
-        } catch(e) {}
+        } catch {
+          // Ignore
+        }
       });
       this.originalStates.clear();
+    }
+
+    // Clean up theater mode
+    if (this.theaterMode) {
+      this.theaterMode = false;
+      document.body.classList.remove('alt-player-theater');
     }
 
     if (this.container) {
       this.container.classList.remove('active');
       this.container.classList.remove('mini-mode');
-      // Wait for fade out
+      this.container.classList.remove('theater-mode');
       setTimeout(() => {
         if (this.container) {
           this.container.remove();
@@ -179,8 +238,15 @@ export class PlayerContainer {
       }, 300);
     }
 
-    // Notify background script
-    chrome.runtime.sendMessage({ action: 'PLAYER_CLOSED' });
+    this.videoElement = null;
+    this.target = null;
+
+    // Notify background script (with retry for MV3 lifecycle)
+    try {
+      chrome.runtime.sendMessage({ action: 'PLAYER_CLOSED' });
+    } catch {
+      // Extension context may be invalidated
+    }
   }
 }
 
