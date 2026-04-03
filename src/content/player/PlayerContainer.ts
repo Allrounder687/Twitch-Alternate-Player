@@ -1,29 +1,30 @@
 import './player.css';
-import { attachVideo } from './VideoCore';
+import { attachVideo, VideoController } from './VideoCore';
 import { createCustomControls } from './ControlsUI';
+import { TwitchChat } from './TwitchChat';
 
 export class PlayerContainer {
   private container: HTMLDivElement | null = null;
-  private videoCoreCleanup: (() => void) | null = null;
+  private videoController: VideoController | null = null;
   private videoElement: HTMLVideoElement | null = null;
   private adBlockCallback: (() => void) | null = null;
   private baseVideoInterval: number | null = null;
   private controlsCleanup: (() => void) | null = null;
-  private originalStates = new Map<HTMLVideoElement, { muted: boolean, paused: boolean }>();
+  private originalStates = new Map<HTMLVideoElement, { muted: boolean; paused: boolean }>();
   private observer: IntersectionObserver | null = null;
+  private twitchChat: TwitchChat | null = null;
 
   public mount(streamerName: string, volume: number = 50, quality: string = 'auto') {
     if (this.container) {
       this.unmount();
     }
 
-    // Identifiers for Twitch player containers
     const playerSelectors = [
       '.video-player__container',
       '.highwind-video-player',
-      '[data-a-target="player-container"]'
+      '[data-a-target="player-container"]',
     ];
-    
+
     let target: HTMLElement | null = null;
     for (const selector of playerSelectors) {
       target = document.querySelector(selector) as HTMLElement;
@@ -35,7 +36,6 @@ export class PlayerContainer {
       return;
     }
 
-    // Ensure the target is relative so our absolute host fills it
     if (getComputedStyle(target).position === 'static') {
       target.style.position = 'relative';
     }
@@ -53,11 +53,11 @@ export class PlayerContainer {
     this.videoElement = video;
     video.autoplay = true;
     video.volume = volume / 100;
-    
+
     // Loaders and Error
     const loader = document.createElement('div');
     loader.className = 'loader active';
-    
+
     const errorMsg = document.createElement('div');
     errorMsg.className = 'error-msg';
 
@@ -65,12 +65,17 @@ export class PlayerContainer {
     videoContainer.appendChild(loader);
     videoContainer.appendChild(errorMsg);
 
-    // Chat Container (overlay)
+    // Chat Container — IRC chat sidebar
     const chatContainer = document.createElement('div');
-    chatContainer.className = 'chat-container hidden';
-    chatContainer.innerHTML = `
-      <iframe src="https://www.twitch.tv/embed/${streamerName}/chat?parent=${window.location.hostname}&darkpopout" width="100%" height="100%" frameborder="0"></iframe>
-    `;
+    chatContainer.className = 'chat-container';
+    chatContainer.id = 'kreo-irc-chat';
+
+    // Check if chat should be initially hidden
+    chrome.storage.sync.get(['chatEnabled'], (data) => {
+      if (data.chatEnabled === false) {
+        chatContainer.classList.add('hidden');
+      }
+    });
 
     // Mini Close Button
     const miniClose = document.createElement('button');
@@ -86,8 +91,19 @@ export class PlayerContainer {
     this.container.appendChild(miniClose);
     target.appendChild(this.container);
 
-    // Initialize custom UI
-    const controls = createCustomControls(videoContainer, video, streamerName, quality, chatContainer, () => this.unmount());
+    // Attach HLS logic (returns controller)
+    this.videoController = attachVideo(video, streamerName, loader, errorMsg);
+
+    // Initialize custom controls with the video controller
+    const controls = createCustomControls(
+      videoContainer,
+      video,
+      streamerName,
+      quality,
+      chatContainer,
+      () => this.unmount(),
+      this.videoController
+    );
     this.controlsCleanup = controls.cleanup;
 
     // Trigger animation
@@ -95,21 +111,24 @@ export class PlayerContainer {
       if (this.container) this.container.classList.add('active');
     });
 
-    // Attach HLS logic
-    this.videoCoreCleanup = attachVideo(video, streamerName, loader, errorMsg);
+    // Initialize IRC Chat
+    this.twitchChat = new TwitchChat(streamerName, chatContainer);
+    this.twitchChat.connect();
 
     // Setup Sticky Mini-mode Observer
-    this.observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        // If the main player area is mostly out of view, go mini
-        if (entry.intersectionRatio < 0.1) {
-           this.container?.classList.add('mini-mode');
-        } else if (entry.intersectionRatio > 0.5) {
-           this.container?.classList.remove('mini-mode');
-        }
-      });
-    }, { threshold: [0.1, 0.5] });
-    
+    this.observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.intersectionRatio < 0.1) {
+            this.container?.classList.add('mini-mode');
+          } else if (entry.intersectionRatio > 0.5) {
+            this.container?.classList.remove('mini-mode');
+          }
+        });
+      },
+      { threshold: [0.1, 0.5] }
+    );
+
     this.observer.observe(target);
 
     this.startBaseVideoKiller();
@@ -118,8 +137,8 @@ export class PlayerContainer {
   private startBaseVideoKiller() {
     this.baseVideoInterval = window.setInterval(() => {
       const allVideos = document.querySelectorAll('video');
-      allVideos.forEach(vid => {
-        if (vid === this.videoElement) return; // Skip our own player
+      allVideos.forEach((vid) => {
+        if (vid === this.videoElement) return;
 
         if (!this.originalStates.has(vid)) {
           this.originalStates.set(vid, { muted: vid.muted, paused: vid.paused });
@@ -128,9 +147,11 @@ export class PlayerContainer {
         try {
           if (!vid.paused) vid.pause();
           if (!vid.muted) vid.muted = true;
-        } catch(e) {}
+        } catch {
+          // Ignore cross-origin errors
+        }
       });
-    }, 1000); // Re-check every second in case Twitch tries to unpause it
+    }, 1000);
   }
 
   public unmount() {
@@ -139,9 +160,14 @@ export class PlayerContainer {
       this.observer = null;
     }
 
-    if (this.videoCoreCleanup) {
-      this.videoCoreCleanup();
-      this.videoCoreCleanup = null;
+    if (this.twitchChat) {
+      this.twitchChat.destroy();
+      this.twitchChat = null;
+    }
+
+    if (this.videoController) {
+      this.videoController.cleanup();
+      this.videoController = null;
     }
 
     if (this.videoElement && this.adBlockCallback) {
@@ -162,7 +188,9 @@ export class PlayerContainer {
         try {
           vid.muted = state.muted;
           if (!state.paused) vid.play().catch(() => {});
-        } catch(e) {}
+        } catch {
+          // Ignore
+        }
       });
       this.originalStates.clear();
     }
@@ -170,7 +198,6 @@ export class PlayerContainer {
     if (this.container) {
       this.container.classList.remove('active');
       this.container.classList.remove('mini-mode');
-      // Wait for fade out
       setTimeout(() => {
         if (this.container) {
           this.container.remove();
@@ -180,7 +207,11 @@ export class PlayerContainer {
     }
 
     // Notify background script
-    chrome.runtime.sendMessage({ action: 'PLAYER_CLOSED' });
+    try {
+      chrome.runtime.sendMessage({ action: 'PLAYER_CLOSED' });
+    } catch {
+      // Context may be invalidated
+    }
   }
 }
 

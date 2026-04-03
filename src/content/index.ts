@@ -3,8 +3,8 @@ import { playerInstance } from './player/PlayerContainer';
 
 function getStreamerNameFromUrl(): string | null {
   const path = window.location.pathname.split('/');
-  // Filter out non-streamer paths
-  if (path.length >= 2 && path[1] !== '' && !['directory', 'p', 'search', 'videos', 'u', 'settings', 'subscriptions'].includes(path[1])) {
+  const excluded = ['directory', 'p', 'search', 'videos', 'u', 'settings', 'subscriptions', 'drops', 'inventory', 'wallet', 'friends', 'moderator'];
+  if (path.length >= 2 && path[1] !== '' && !excluded.includes(path[1])) {
     return path[1];
   }
   return null;
@@ -19,6 +19,49 @@ function isContextValid() {
   return typeof chrome !== 'undefined' && !!chrome.runtime && !!chrome.runtime.id;
 }
 
+/**
+ * Send a message to the background script with retry logic for MV3 service worker restarts.
+ */
+export function sendMessageWithRetry(
+  message: any,
+  maxRetries = 3
+): Promise<any> {
+  return new Promise((resolve) => {
+    let attempt = 0;
+
+    function trySend() {
+      if (!isContextValid()) {
+        resolve({ error: 'Extension context invalidated' });
+        return;
+      }
+      attempt++;
+      try {
+        chrome.runtime.sendMessage(message, (response) => {
+          if (chrome.runtime.lastError) {
+            const errMsg = chrome.runtime.lastError.message || '';
+            // Retry on "Receiving end does not exist" — service worker may be waking up
+            if (attempt < maxRetries && errMsg.includes('Receiving end does not exist')) {
+              setTimeout(trySend, 500 * attempt);
+              return;
+            }
+            resolve({ error: errMsg });
+          } else {
+            resolve(response || {});
+          }
+        });
+      } catch {
+        if (attempt < maxRetries) {
+          setTimeout(trySend, 500 * attempt);
+        } else {
+          resolve({ error: 'Failed to send message after retries' });
+        }
+      }
+    }
+
+    trySend();
+  });
+}
+
 // Initial storage load
 if (isContextValid()) {
   chrome.storage.sync.get(['isEnabled', 'volume', 'quality'], (data) => {
@@ -29,7 +72,7 @@ if (isContextValid()) {
     checkAndMount();
   });
 
-  // Listen for storage changes instead of polling every 2s
+  // Listen for storage changes
   chrome.storage.sync.onChanged.addListener((changes) => {
     if (changes.isEnabled) playerEnabled = changes.isEnabled.newValue;
     if (changes.volume) currentVolume = changes.volume.newValue;
@@ -40,7 +83,7 @@ if (isContextValid()) {
 
 const checkAndMount = () => {
   const streamerName = getStreamerNameFromUrl();
-  
+
   if (playerEnabled && streamerName) {
     if (currentStreamer !== streamerName) {
       currentStreamer = streamerName;
@@ -53,17 +96,18 @@ const checkAndMount = () => {
 
   // Pre-fetch if we are on a new streamer but player is disabled
   if (streamerName && !playerEnabled && streamerName !== currentStreamer) {
-    chrome.runtime.sendMessage({ action: 'PREFETCH_STREAM', streamerName });
+    sendMessageWithRetry({ action: 'PREFETCH_STREAM', streamerName });
   }
 };
 
-// Listen for messages from the popup (e.g. toggling the player)
+// Listen for messages from the popup
 if (isContextValid()) {
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.action === 'TOGGLE_PLAYER') {
       checkAndMount();
     }
-    return true;
+    sendResponse();
+    return false;
   });
 }
 
@@ -72,14 +116,16 @@ function injectPlayerButton() {
   const streamerName = getStreamerNameFromUrl();
   if (!streamerName) return;
 
-  const controlGroup = 
-    document.querySelector('[data-a-target="player-controls-right"]') || 
+  const controlGroup =
+    document.querySelector('[data-a-target="player-controls-right"]') ||
     document.querySelector('.player-controls__right-control-group') ||
     document.querySelector('[data-test-selector="right-control-group"]');
 
   if (!controlGroup) return;
 
-  const btn = (document.getElementById('kreo-alt-player-btn') as HTMLButtonElement) || document.createElement('button');
+  const btn =
+    (document.getElementById('kreo-alt-player-btn') as HTMLButtonElement) ||
+    document.createElement('button');
   if (!btn.id) {
     btn.id = 'kreo-alt-player-btn';
     controlGroup.insertBefore(btn, controlGroup.firstChild);
@@ -106,17 +152,16 @@ function injectPlayerButton() {
 
   applyStyles();
 
-  btn.onmouseover = () => btn.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
-  btn.onmouseout = () => btn.style.backgroundColor = 'transparent';
+  btn.onmouseover = () => (btn.style.backgroundColor = 'rgba(255, 255, 255, 0.15)');
+  btn.onmouseout = () => (btn.style.backgroundColor = 'transparent');
 
   btn.onclick = (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (!isContextValid()) return;
-    
+
     const toggleState = !playerEnabled;
     chrome.storage.sync.set({ isEnabled: toggleState });
-    // Local state will be updated by the listener
   };
 }
 

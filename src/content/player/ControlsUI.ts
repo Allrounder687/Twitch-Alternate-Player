@@ -1,85 +1,155 @@
+import type { VideoController, HlsQualityLevel, StreamStats } from './VideoCore';
+
 export function createCustomControls(
   videoContainer: HTMLElement,
   videoElement: HTMLVideoElement,
   streamerName: string,
   quality: string,
   chatContainer: HTMLElement,
-  onClose: () => void
+  onClose: () => void,
+  videoController: VideoController
 ) {
   // === BOTTOM CONTROLS ===
   const controlsBar = document.createElement('div');
   controlsBar.className = 'controls-bar custom-ui';
   controlsBar.innerHTML = `
     <div class="controls-section">
-      <button class="ctrl-btn play-btn">
+      <button class="ctrl-btn play-btn" title="Play/Pause (Space)">
         <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
       </button>
       <div class="volume-container">
-        <button class="ctrl-btn mute-btn">
+        <button class="ctrl-btn mute-btn" title="Mute (M)">
           <svg class="vol-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
         </button>
         <input type="range" class="volume-slider" min="0" max="100" value="${videoElement.volume * 100}">
       </div>
-      <span class="live-indicator" style="color:red; font-weight:bold; font-size:12px;">LIVE</span>
+      <span class="live-indicator">LIVE</span>
     </div>
     <div class="controls-section">
+      <button class="ctrl-btn clip-btn" title="Record Clip (30s)">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
+      </button>
+      <button class="ctrl-btn stats-btn" title="Stream Stats">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 5-5"/></svg>
+      </button>
+      <button class="ctrl-btn audio-only-btn" title="Audio Only">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      </button>
       <button class="ctrl-btn switch-default-btn" title="Return to Twitch Player">Default Player</button>
       <button class="ctrl-btn chat-toggle-btn" title="Toggle Chat">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
       </button>
-      <button class="ctrl-btn settings-btn" title="Settings">Quality</button>
-      <button class="ctrl-btn pip-btn" title="Mini Player">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H3c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 12H3V4h10v10z"></path><path d="M21 8h-4v2h4v10H11v-4H9v4c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"></path></svg>
+      <button class="ctrl-btn settings-btn" title="Quality">Quality</button>
+      <button class="ctrl-btn pip-btn" title="Picture-in-Picture">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="12" y="9" width="8" height="6" rx="1" fill="currentColor" opacity="0.4"/></svg>
       </button>
-      <button class="ctrl-btn theater-btn" title="Theater Mode">
+      <button class="ctrl-btn theater-btn" title="Theater Mode (T)">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 5v14h20V5H2zm18 12H4V7h16v10z"/></svg>
       </button>
-      <button class="ctrl-btn fullscreen-btn" title="Fullscreen">
+      <button class="ctrl-btn fullscreen-btn" title="Fullscreen (F)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
       </button>
     </div>
   `;
 
-  // === SETTINGS MODAL ===
+  // === SETTINGS MODAL (Quality) ===
   const settingsModal = document.createElement('div');
   settingsModal.className = 'settings-modal';
-  
-  const updateSettingsUI = () => {
-    const qualities = ['auto', '1080p60', '720p60', '480p30', '360p30', 'audio_only'];
+
+  let currentQuality = quality;
+  let isAudioOnly = false;
+
+  const updateSettingsUI = (levels?: HlsQualityLevel[]) => {
+    const dynamicLevels = levels || videoController.getQualityLevels();
+
+    let qualityOptionsHtml = `<div class="quality-option ${currentQuality === 'auto' ? 'selected' : ''}" data-quality="auto" data-level="-1">Auto</div>`;
+
+    if (dynamicLevels.length > 0) {
+      // Sort by height descending
+      const sorted = [...dynamicLevels].sort((a, b) => b.height - a.height);
+      for (const level of sorted) {
+        if (level.height === 0 && level.bitrate < 200000) continue; // Skip audio-only from quality list
+        const name = level.name || `${level.height}p`;
+        const isSource = level.index === sorted[0].index;
+        const label = isSource ? `${name} (Source)` : name;
+        const selected = currentQuality === name || currentQuality === `${level.height}p`;
+        qualityOptionsHtml += `<div class="quality-option ${selected ? 'selected' : ''}" data-quality="${name}" data-level="${level.index}">${label}</div>`;
+      }
+    } else {
+      // Fallback static options
+      const fallback = ['1080p60', '720p60', '480p30', '360p30'];
+      for (const q of fallback) {
+        qualityOptionsHtml += `<div class="quality-option ${q === currentQuality ? 'selected' : ''}" data-quality="${q}" data-level="-1">${q}</div>`;
+      }
+    }
+
+    qualityOptionsHtml += `<div class="quality-option ${currentQuality === 'audio_only' ? 'selected' : ''}" data-quality="audio_only" data-level="-1">Audio Only</div>`;
+
     settingsModal.innerHTML = `
       <div class="settings-group">
         <span class="settings-label">Quality</span>
-        <div class="quality-list">
-          ${qualities.map(q => `
-            <div class="quality-option ${q === quality ? 'selected' : ''}" data-quality="${q}">
-              ${q === 'audio_only' ? 'Audio Only' : q === 'auto' ? 'Auto' : q}
-            </div>
-          `).join('')}
-        </div>
+        <div class="quality-list">${qualityOptionsHtml}</div>
       </div>
     `;
 
-    // Re-attach listeners to new elements
-    settingsModal.querySelectorAll('.quality-option').forEach(opt => {
+    // Attach listeners
+    settingsModal.querySelectorAll('.quality-option').forEach((opt) => {
       opt.addEventListener('click', () => {
         const selected = opt.getAttribute('data-quality') || 'auto';
-        videoContainer.dispatchEvent(new CustomEvent('twitch-set-quality', { detail: selected }));
-        // Update storage
+        const levelIdx = parseInt(opt.getAttribute('data-level') || '-1');
+
+        if (selected === 'auto') {
+          videoController.setQuality(-1);
+        } else if (selected === 'audio_only') {
+          videoElement.dispatchEvent(new CustomEvent('twitch-set-quality', { detail: 'audio_only' }));
+        } else if (levelIdx >= 0) {
+          videoController.setQuality(levelIdx);
+        } else {
+          videoElement.dispatchEvent(new CustomEvent('twitch-set-quality', { detail: selected }));
+        }
+
         chrome.storage.sync.set({ quality: selected });
-        // Update local UI
-        quality = selected;
+        currentQuality = selected;
+        isAudioOnly = selected === 'audio_only';
+        updateAudioOnlyBtn();
         updateSettingsUI();
         settingsModal.classList.remove('active');
       });
     });
   };
 
+  // Listen for dynamic quality levels from HLS
+  videoController.onQualityLevelsReady((levels) => {
+    updateSettingsUI(levels);
+  });
+
   updateSettingsUI();
+
+  // === STATS OVERLAY ===
+  const statsOverlay = document.createElement('div');
+  statsOverlay.className = 'stats-overlay';
+  statsOverlay.style.display = 'none';
+  let statsVisible = false;
+
+  const updateStatsDisplay = (stats: StreamStats) => {
+    if (!statsVisible) return;
+    statsOverlay.innerHTML = `
+      <div class="stats-row"><span>Resolution</span><span>${stats.resolution}</span></div>
+      <div class="stats-row"><span>Bitrate</span><span>${(stats.bitrate / 1000).toFixed(0)} kbps</span></div>
+      <div class="stats-row"><span>FPS</span><span>${stats.fps || '—'}</span></div>
+      <div class="stats-row"><span>Dropped Frames</span><span>${stats.droppedFrames}</span></div>
+      <div class="stats-row"><span>Buffer</span><span>${stats.bufferLength.toFixed(1)}s</span></div>
+      <div class="stats-row"><span>Latency</span><span>${stats.latency.toFixed(1)}s</span></div>
+    `;
+  };
+
+  videoController.onStats(updateStatsDisplay);
 
   videoContainer.appendChild(controlsBar);
   videoContainer.appendChild(settingsModal);
+  videoContainer.appendChild(statsOverlay);
 
-  // Auto-hide UI logic
+  // === Auto-hide UI ===
   let hideTimeout: number;
   const showUI = () => {
     videoContainer.classList.remove('hide-ui');
@@ -92,7 +162,7 @@ export function createCustomControls(
   videoContainer.addEventListener('mouseleave', () => videoContainer.classList.add('hide-ui'));
   showUI();
 
-  // Elements
+  // === Element references ===
   const playBtn = controlsBar.querySelector('.play-btn') as HTMLButtonElement;
   const playIcon = playBtn.querySelector('.play-icon') as SVGElement;
   const muteBtn = controlsBar.querySelector('.mute-btn') as HTMLButtonElement;
@@ -101,21 +171,26 @@ export function createCustomControls(
   const fullscreenBtn = controlsBar.querySelector('.fullscreen-btn') as HTMLButtonElement;
   const settingsBtn = controlsBar.querySelector('.settings-btn') as HTMLButtonElement;
   const switchDefaultBtn = controlsBar.querySelector('.switch-default-btn') as HTMLButtonElement;
-  
-  // Interactions
+  const pipBtn = controlsBar.querySelector('.pip-btn') as HTMLButtonElement;
+  const theaterBtn = controlsBar.querySelector('.theater-btn') as HTMLButtonElement;
+  const chatToggle = controlsBar.querySelector('.chat-toggle-btn') as HTMLButtonElement;
+  const clipBtn = controlsBar.querySelector('.clip-btn') as HTMLButtonElement;
+  const statsBtn = controlsBar.querySelector('.stats-btn') as HTMLButtonElement;
+  const audioOnlyBtn = controlsBar.querySelector('.audio-only-btn') as HTMLButtonElement;
+
+  // === Switch to default player ===
   switchDefaultBtn.addEventListener('click', () => {
-    chrome.storage.sync.set({ isEnabled: false }, () => {
-      onClose();
-    });
+    chrome.storage.sync.set({ isEnabled: false }, () => onClose());
   });
 
+  // === Play/Pause ===
   const togglePlay = () => {
     if (videoElement.paused) videoElement.play();
     else videoElement.pause();
   };
   playBtn.addEventListener('click', togglePlay);
   videoElement.addEventListener('click', togglePlay);
-  
+
   videoElement.addEventListener('play', () => {
     playIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
   });
@@ -124,14 +199,17 @@ export function createCustomControls(
     showUI();
   });
 
-  // Volume
+  // === Volume ===
   const updateVolumeIcon = () => {
     if (videoElement.muted || videoElement.volume === 0) {
-      volIcon.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.58.45-1.24.8-1.97.98v2.09c1.24-.22 2.37-.74 3.33-1.47L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
+      volIcon.innerHTML =
+        '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.58.45-1.24.8-1.97.98v2.09c1.24-.22 2.37-.74 3.33-1.47L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
     } else if (videoElement.volume > 0.5) {
-      volIcon.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
+      volIcon.innerHTML =
+        '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
     } else {
-      volIcon.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>';
+      volIcon.innerHTML =
+        '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>';
     }
   };
 
@@ -139,7 +217,6 @@ export function createCustomControls(
     videoElement.muted = !videoElement.muted;
     updateVolumeIcon();
   };
-
   muteBtn.addEventListener('click', toggleMute);
 
   volSlider.addEventListener('input', () => {
@@ -162,22 +239,18 @@ export function createCustomControls(
     const nextVolume = Math.max(0, Math.min(1, videoElement.volume + delta));
     videoElement.volume = nextVolume;
     videoElement.muted = nextVolume === 0;
-    
-    // Save to storage (throttled implicitly by user interaction speed)
     chrome.storage.sync.set({ volume: Math.round(nextVolume * 100) });
   };
   videoContainer.addEventListener('wheel', wheelHandler, { passive: false });
 
   updateVolumeIcon();
 
-
-  // Chat Toggling
-  const chatToggle = controlsBar.querySelector('.chat-toggle-btn') as HTMLButtonElement;
+  // === Chat Toggle ===
   chatToggle.addEventListener('click', () => {
     chatContainer.classList.toggle('hidden');
   });
 
-  // Fullscreen
+  // === Fullscreen ===
   fullscreenBtn.addEventListener('click', () => {
     if (!document.fullscreenElement) {
       videoContainer.requestFullscreen().catch(() => {});
@@ -186,20 +259,20 @@ export function createCustomControls(
     }
   });
 
-  // Settings
+  // === Settings ===
   settingsBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     settingsModal.classList.toggle('active');
   });
 
-  document.addEventListener('click', (e) => {
+  const closeSettingsHandler = (e: MouseEvent) => {
     if (!settingsModal.contains(e.target as Node) && !settingsBtn.contains(e.target as Node)) {
-       settingsModal.classList.remove('active');
+      settingsModal.classList.remove('active');
     }
-  });
+  };
+  document.addEventListener('click', closeSettingsHandler);
 
-  // PiP (Mini Player)
-  const pipBtn = controlsBar.querySelector('.pip-btn') as HTMLButtonElement;
+  // === PiP ===
   pipBtn.addEventListener('click', async () => {
     try {
       if (document.pictureInPictureElement) {
@@ -207,22 +280,21 @@ export function createCustomControls(
       } else {
         await videoElement.requestPictureInPicture();
       }
-    } catch (e) {
-      console.error("[Alt Player] PiP failed:", e);
+    } catch (e: any) {
+      console.error('[Alt Player] PiP failed:', e?.message || String(e));
     }
   });
 
-  // Theater Mode
-  const theaterBtn = controlsBar.querySelector('.theater-btn') as HTMLButtonElement;
+  // === Theater Mode ===
   theaterBtn.addEventListener('click', () => {
-    // Proxy the click to Twitch's native theater mode button for robust layout integration
     const selectors = [
       '[data-a-target="player-theatre-mode-button"]',
       '[data-a-target="right-control-theater-mode-button"]',
       '[data-a-target="core-player-theater-mode-button"]',
-      'button[aria-label*="Theater Mode"]'
+      'button[aria-label*="heater"]',
+      'button[aria-label*="Theatre"]',
     ];
-    
+
     let nativeBtn: HTMLElement | null = null;
     for (const s of selectors) {
       nativeBtn = document.querySelector(s) as HTMLElement;
@@ -232,15 +304,82 @@ export function createCustomControls(
     if (nativeBtn) {
       nativeBtn.click();
     } else {
-      console.warn('[Alt Player] Native theater mode button not found using any known selector.');
+      // Fallback: toggle a CSS class on the player host
+      const host = document.getElementById('kreo-twitch-player-host');
+      host?.classList.toggle('theater-mode');
     }
   });
 
-  // Hotkeys
+  // === Clip Recording ===
+  let clipRecording = false;
+  clipBtn.addEventListener('click', async () => {
+    if (clipRecording) {
+      videoController.stopClip();
+      clipBtn.classList.remove('recording');
+      clipRecording = false;
+      return;
+    }
+
+    clipRecording = true;
+    clipBtn.classList.add('recording');
+    clipBtn.title = 'Recording... Click to stop';
+
+    const blob = await videoController.startClip();
+
+    clipBtn.classList.remove('recording');
+    clipBtn.title = 'Record Clip (30s)';
+    clipRecording = false;
+
+    if (blob && blob.size > 0) {
+      // Trigger download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `clip_${streamerName}_${Date.now()}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  });
+
+  // === Stats Overlay ===
+  statsBtn.addEventListener('click', () => {
+    statsVisible = !statsVisible;
+    statsOverlay.style.display = statsVisible ? 'block' : 'none';
+    statsBtn.classList.toggle('active-toggle', statsVisible);
+    if (statsVisible) {
+      // Trigger immediate update
+      updateStatsDisplay(videoController.getStats());
+    }
+  });
+
+  // === Audio Only Toggle ===
+  const updateAudioOnlyBtn = () => {
+    audioOnlyBtn.classList.toggle('active-toggle', isAudioOnly);
+    audioOnlyBtn.title = isAudioOnly ? 'Audio Only (On)' : 'Audio Only';
+  };
+
+  audioOnlyBtn.addEventListener('click', () => {
+    isAudioOnly = !isAudioOnly;
+    if (isAudioOnly) {
+      videoElement.dispatchEvent(new CustomEvent('twitch-set-quality', { detail: 'audio_only' }));
+      currentQuality = 'audio_only';
+    } else {
+      videoElement.dispatchEvent(new CustomEvent('twitch-set-quality', { detail: 'auto' }));
+      currentQuality = 'auto';
+    }
+    chrome.storage.sync.set({ quality: currentQuality });
+    updateAudioOnlyBtn();
+    updateSettingsUI();
+  });
+  updateAudioOnlyBtn();
+
+  // === Keyboard Shortcuts ===
   const keydownHandler = (e: KeyboardEvent) => {
-    // Ignore if user is typing in a text field
     const target = e.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      return;
 
     switch (e.code) {
       case 'Space':
@@ -261,29 +400,43 @@ export function createCustomControls(
         break;
       case 'ArrowUp':
         e.preventDefault();
-        const up = Math.min(1, videoElement.volume + 0.1);
-        videoElement.volume = up;
-        volSlider.value = (up * 100).toString();
+        videoElement.volume = Math.min(1, videoElement.volume + 0.1);
+        volSlider.value = (videoElement.volume * 100).toString();
         break;
       case 'ArrowDown':
         e.preventDefault();
-        const down = Math.max(0, videoElement.volume - 0.1);
-        videoElement.volume = down;
-        volSlider.value = (down * 100).toString();
+        videoElement.volume = Math.max(0, videoElement.volume - 0.1);
+        volSlider.value = (videoElement.volume * 100).toString();
+        break;
+      case 'ArrowLeft':
+        // Seek backward 5s (VODs)
+        e.preventDefault();
+        videoElement.currentTime = Math.max(0, videoElement.currentTime - 5);
+        break;
+      case 'ArrowRight':
+        // Seek forward 5s (VODs)
+        e.preventDefault();
+        videoElement.currentTime += 5;
         break;
       case 'KeyJ':
-        // Instant Replay (backward 10s)
+        // Instant Replay backward 10s
         e.preventDefault();
         videoElement.currentTime = Math.max(0, videoElement.currentTime - 10);
+        break;
+      case 'KeyL':
+        // Forward 10s
+        e.preventDefault();
+        videoElement.currentTime += 10;
         break;
     }
   };
   window.addEventListener('keydown', keydownHandler);
 
-  return { 
+  return {
     cleanup: () => {
       window.removeEventListener('keydown', keydownHandler);
-    }
+      document.removeEventListener('click', closeSettingsHandler);
+      videoContainer.removeEventListener('wheel', wheelHandler);
+    },
   };
 }
-
