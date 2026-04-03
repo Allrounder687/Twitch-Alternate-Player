@@ -216,15 +216,17 @@ video {
 }
 /* Sticky Mini-Player Mode */
 #kreo-twitch-player-host.mini-mode {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: 384px;
-  height: 216px;
-  z-index: 10000;
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  top: auto !important;
+  left: auto !important;
+  width: 384px !important;
+  height: 216px !important;
+  z-index: 10000 !important;
   border-radius: 12px;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   overflow: hidden;
   animation: mini-slide-in 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   transform-origin: bottom right;
@@ -234,13 +236,21 @@ video {
   display: none !important; /* Hide chat in mini mode for space */
 }
 
+#kreo-twitch-player-host.mini-mode .controls-section:first-child {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#kreo-twitch-player-host.mini-mode .settings-btn,
+#kreo-twitch-player-host.mini-mode .chat-toggle-btn,
+#kreo-twitch-player-host.mini-mode .pip-btn,
+#kreo-twitch-player-host.mini-mode .theater-btn {
+  display: none !important;
+}
+
 #kreo-twitch-player-host.mini-mode .controls-bar {
   padding: 8px;
   background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-}
-
-#kreo-twitch-player-host.mini-mode .controls-section:first-child {
-  display: none; /* Hide volume/play icon in mini to save space */
 }
 
 @keyframes mini-slide-in {
@@ -264,6 +274,20 @@ video {
   border: none;
 }
 
+#kreo-twitch-player-host:not(.mini-mode) .mini-close-btn {
+  display: none !important;
+}
+
 #kreo-twitch-player-host.mini-mode:hover .mini-close-btn {
   opacity: 1;
+}
+
+/* Theater Mode */
+#kreo-twitch-player-host.theater-mode {
+  position: fixed !important;
+  top: 50px !important; /* Twitch Top Nav */
+  left: 0 !important;
+  width: 100vw !important;
+  height: calc(100vh - 50px) !important;
+  z-index: 9999 !important;
 }

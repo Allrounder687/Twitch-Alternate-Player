@@ -31,7 +31,10 @@ export function createCustomControls(
       <button class="ctrl-btn pip-btn" title="Mini Player">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H3c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 12H3V4h10v10z"></path><path d="M21 8h-4v2h4v10H11v-4H9v4c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"></path></svg>
       </button>
-      <button class="ctrl-btn fullscreen-btn">
+      <button class="ctrl-btn theater-btn" title="Theater Mode">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 5v14h20V5H2zm18 12H4V7h16v10z"/></svg>
+      </button>
+      <button class="ctrl-btn fullscreen-btn" title="Fullscreen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
       </button>
     </div>
@@ -209,6 +212,15 @@ export function createCustomControls(
     }
   });
 
+  // Theater Mode
+  const theaterBtn = controlsBar.querySelector('.theater-btn') as HTMLButtonElement;
+  theaterBtn.addEventListener('click', () => {
+    const host = document.getElementById('kreo-twitch-player-host');
+    if (host) {
+      host.classList.toggle('theater-mode');
+    }
+  });
+
   // Hotkeys
   const keydownHandler = (e: KeyboardEvent) => {
     // Ignore if user is typing in a text field
@@ -227,6 +239,10 @@ export function createCustomControls(
       case 'KeyF':
         e.preventDefault();
         fullscreenBtn.click();
+        break;
+      case 'KeyT':
+        e.preventDefault();
+        theaterBtn.click();
         break;
       case 'ArrowUp':
         e.preventDefault();
