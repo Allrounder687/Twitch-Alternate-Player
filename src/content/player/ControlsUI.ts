@@ -25,6 +25,9 @@ export function createCustomControls(
       </div>
       <span class="live-indicator">LIVE</span>
       <span class="latency-display" title="Click to cycle latency mode"></span>
+      <span class="ad-shield-icon" title="Ad filter">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+      </span>
     </div>
     <div class="controls-section">
       <button class="ctrl-btn clip-btn" title="Record Clip (30s)">
@@ -184,6 +187,39 @@ export function createCustomControls(
     currentLatencyMode = LATENCY_MODES[nextIdx];
     videoController.setLatencyMode(currentLatencyMode);
   });
+
+  // === AD SHIELD INDICATOR ===
+  const adShieldIcon = controlsBar.querySelector('.ad-shield-icon') as HTMLElement;
+  let adBlockCount = 0;
+
+  const adBlockedHandler = () => {
+    adBlockCount++;
+    adShieldIcon.title = `Ad filter — ${adBlockCount} ad segment${adBlockCount > 1 ? 's' : ''} filtered`;
+
+    // Pulse animation
+    adShieldIcon.classList.remove('pulse');
+    void adShieldIcon.offsetWidth; // force reflow
+    adShieldIcon.classList.add('pulse');
+
+    // Show toast if notifications are enabled (toast manager is injected via event)
+    chrome.storage.sync.get(['showAdNotifications'], (data) => {
+      if (data.showAdNotifications !== false) {
+        videoElement.dispatchEvent(new CustomEvent('twitch-show-toast', {
+          detail: { message: 'Ad segment filtered', type: 'info' },
+        }));
+      }
+    });
+  };
+
+  videoElement.addEventListener('twitch-ad-blocked', adBlockedHandler);
+
+  // Listen for channel points claimed
+  const pointsClaimedHandler = () => {
+    videoElement.dispatchEvent(new CustomEvent('twitch-show-toast', {
+      detail: { message: 'Channel points claimed!', type: 'success' },
+    }));
+  };
+  document.addEventListener('twitch-points-claimed', pointsClaimedHandler);
 
   videoContainer.appendChild(controlsBar);
   videoContainer.appendChild(settingsModal);
@@ -479,6 +515,8 @@ export function createCustomControls(
       window.removeEventListener('keydown', keydownHandler);
       document.removeEventListener('click', closeSettingsHandler);
       videoContainer.removeEventListener('wheel', wheelHandler);
+      videoElement.removeEventListener('twitch-ad-blocked', adBlockedHandler);
+      document.removeEventListener('twitch-points-claimed', pointsClaimedHandler);
     },
   };
 }

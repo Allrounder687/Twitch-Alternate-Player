@@ -3,6 +3,7 @@ import { attachVideo, VideoController } from './VideoCore';
 import { createCustomControls } from './ControlsUI';
 import { TwitchChat } from './TwitchChat';
 import { ChannelPointsClaimer } from './ChannelPointsClaimer';
+import { ToastManager } from './ToastManager';
 
 export class PlayerContainer {
   private container: HTMLDivElement | null = null;
@@ -15,6 +16,8 @@ export class PlayerContainer {
   private observer: IntersectionObserver | null = null;
   private twitchChat: TwitchChat | null = null;
   private channelPointsClaimer: ChannelPointsClaimer | null = null;
+  private toastManager: ToastManager | null = null;
+  private toastHandler: ((e: Event) => void) | null = null;
 
   public mount(streamerName: string, volume: number = 50, quality: string = 'auto') {
     if (this.container) {
@@ -108,6 +111,16 @@ export class PlayerContainer {
     );
     this.controlsCleanup = controls.cleanup;
 
+    // Initialize Toast Manager
+    this.toastManager = new ToastManager(videoContainer);
+    this.toastHandler = ((e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail && this.toastManager) {
+        this.toastManager.show(detail.message, detail.type || 'info');
+      }
+    });
+    video.addEventListener('twitch-show-toast', this.toastHandler);
+
     // Trigger animation
     requestAnimationFrame(() => {
       if (this.container) this.container.classList.add('active');
@@ -167,6 +180,16 @@ export class PlayerContainer {
     if (this.observer) {
       this.observer.disconnect();
       this.observer = null;
+    }
+
+    if (this.toastManager) {
+      this.toastManager.destroy();
+      this.toastManager = null;
+    }
+
+    if (this.videoElement && this.toastHandler) {
+      this.videoElement.removeEventListener('twitch-show-toast', this.toastHandler);
+      this.toastHandler = null;
     }
 
     if (this.channelPointsClaimer) {

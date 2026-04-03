@@ -32,6 +32,7 @@ export function attachVideo(
   let hlsInstance: Hls | null = null;
   let isDestroyed = false;
   let watchdogInterval: number | null = null;
+  let recoveryAttempts = 0;
 
   // Clip recording state
   let mediaRecorder: MediaRecorder | null = null;
@@ -45,16 +46,71 @@ export function attachVideo(
   const statsListeners: Array<(stats: StreamStats) => void> = [];
   let statsInterval: number | null = null;
 
-  const showError = (msg: string) => {
+  const showError = (msg: string, showReload = false) => {
     if (isDestroyed) return;
     loaderElement.classList.remove('active');
-    errorElement.innerText = msg;
+    if (showReload) {
+      errorElement.innerHTML = `${msg}<br><button class="error-reload-btn">Reload Stream</button>`;
+      const reloadBtn = errorElement.querySelector('.error-reload-btn');
+      reloadBtn?.addEventListener('click', () => {
+        errorElement.classList.remove('active');
+        loaderElement.classList.add('active');
+        recoveryAttempts = 0;
+        initStream();
+      });
+    } else {
+      errorElement.innerText = msg;
+    }
     errorElement.classList.add('active');
+  };
+
+  const showToast = (message: string, type: string = 'info') => {
+    videoElement.dispatchEvent(new CustomEvent('twitch-show-toast', {
+      detail: { message, type },
+    }));
   };
 
   const hideLoader = () => {
     if (isDestroyed) return;
     loaderElement.classList.remove('active');
+  };
+
+  const handleGracefulFallback = () => {
+    if (isDestroyed) return;
+    recoveryAttempts++;
+
+    if (recoveryAttempts === 1) {
+      // First attempt: retry with lower quality
+      showToast('Switching to lower quality...', 'warning');
+      if (hlsInstance) {
+        const levels = hlsInstance.levels;
+        if (levels && levels.length > 1) {
+          // Find a level lower than current
+          const currentLevel = hlsInstance.currentLevel;
+          const lowerLevel = Math.max(0, currentLevel - 1);
+          hlsInstance.currentLevel = lowerLevel;
+          hlsInstance.startLoad();
+        } else {
+          hlsInstance.startLoad();
+        }
+      }
+    } else if (recoveryAttempts === 2) {
+      // Second attempt: reload stream token
+      showToast('Reloading stream token...', 'warning');
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
+      }
+      initStream();
+    } else {
+      // Third attempt: show error with reload button
+      showToast('Stream failed — click to reload', 'error');
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
+      }
+      showError('Stream failed to load.', true);
+    }
   };
 
   const getStats = (): StreamStats => {
@@ -212,16 +268,17 @@ export function attachVideo(
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
                 console.error('[Alt Player] Fatal network error, recovering...');
+                showToast('Stream interrupted — retrying...', 'warning');
                 hlsInstance?.startLoad();
                 break;
               case Hls.ErrorTypes.MEDIA_ERROR:
                 console.error('[Alt Player] Fatal media error, recovering...');
+                showToast('Media error — recovering...', 'warning');
                 hlsInstance?.recoverMediaError();
                 break;
               default:
                 console.error('[Alt Player] Fatal error:', JSON.stringify({ type: data.type, details: data.details }));
-                hlsInstance?.destroy();
-                showError('Stream failed to load (Fatal Error).');
+                handleGracefulFallback();
                 break;
             }
           }
