@@ -185,6 +185,38 @@ input[type="range"]::-webkit-slider-thumb:hover {
   font-style: italic;
 }
 
+/* Color input */
+.color-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.color-picker {
+  width: 36px;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.color-picker::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.color-picker::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+
+.color-text {
+  flex: 1;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
 /* Reset button */
 .reset-btn {
   width: 100%;

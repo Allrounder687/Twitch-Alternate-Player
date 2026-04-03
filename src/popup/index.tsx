@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import { resetChannelSettings } from '../content/player/ChannelSettings';
+import { THEME_PRESETS, THEME_PRESET_NAMES, ThemeManager, type ThemeConfig } from '../content/player/ThemeManager';
 
 type LatencyMode = 'ultra-low' | 'balanced' | 'stable';
 
@@ -29,11 +30,15 @@ const App: React.FC = () => {
   const [twitchUsername, setTwitchUsername] = useState<string>('');
   const [showAdNotifications, setShowAdNotifications] = useState<boolean>(true);
   const [layout, setLayout] = useState<string>('balanced');
+  const [themePreset, setThemePreset] = useState<string>('twitch-dark');
+  const [accentColor, setAccentColor] = useState<string>('#9146FF');
+  const [chatFontSize, setChatFontSize] = useState<number>(13);
+  const [chatSpacing, setChatSpacing] = useState<string>('normal');
 
   useEffect(() => {
     chrome.storage.sync.get(
       ['isEnabled', 'streamerName', 'volume', 'quality', 'latencyMode', 'lowLatency',
-       'chatEnabled', 'emoteProviders', 'autoClaimPoints', 'twitchUsername', 'showAdNotifications', 'layout'],
+       'chatEnabled', 'emoteProviders', 'autoClaimPoints', 'twitchUsername', 'showAdNotifications', 'layout', 'theme'],
       (data) => {
         setIsEnabled(data.isEnabled || false);
         setStreamerName(data.streamerName || '');
@@ -51,6 +56,11 @@ const App: React.FC = () => {
         setTwitchUsername(data.twitchUsername || '');
         setShowAdNotifications(data.showAdNotifications !== false);
         setLayout(data.layout || 'balanced');
+        const theme: ThemeConfig = data.theme || { preset: 'twitch-dark', custom: {} };
+        setThemePreset(theme.preset);
+        setAccentColor(theme.custom.accentColor || '#9146FF');
+        setChatFontSize(parseInt(theme.custom.chatFontSize || '13'));
+        setChatSpacing(theme.custom.chatSpacing || 'normal');
       }
     );
   }, []);
@@ -121,6 +131,43 @@ const App: React.FC = () => {
     const newLayout = e.target.value;
     setLayout(newLayout);
     chrome.storage.sync.set({ layout: newLayout });
+  };
+
+  const saveTheme = (preset: string, accent: string, fontSize: number, spacing: string) => {
+    const spacingMap: Record<string, string> = { compact: '1px', normal: '3px', cozy: '6px' };
+    const config: ThemeConfig = {
+      preset,
+      custom: {
+        accentColor: accent,
+        chatFontSize: `${fontSize}px`,
+        chatSpacing: spacingMap[spacing] || '3px',
+      },
+    };
+    ThemeManager.saveTheme(config);
+  };
+
+  const handleThemePresetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newPreset = e.target.value;
+    setThemePreset(newPreset);
+    saveTheme(newPreset, accentColor, chatFontSize, chatSpacing);
+  };
+
+  const handleAccentColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newColor = e.target.value;
+    setAccentColor(newColor);
+    saveTheme(themePreset, newColor, chatFontSize, chatSpacing);
+  };
+
+  const handleFontSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newSize = parseInt(e.target.value);
+    setChatFontSize(newSize);
+    saveTheme(themePreset, accentColor, newSize, chatSpacing);
+  };
+
+  const handleSpacingChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newSpacing = e.target.value;
+    setChatSpacing(newSpacing);
+    saveTheme(themePreset, accentColor, chatFontSize, newSpacing);
   };
 
   const handleAdNotificationsToggle = () => {
@@ -270,6 +317,59 @@ const App: React.FC = () => {
           <p className="info-text">
             The player filters ad segments from the stream playlist. This may not catch all ads.
           </p>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <span className="section-title">Theme</span>
+        <div className="settings">
+          <div className="form-group">
+            <label>Theme Preset</label>
+            <select value={themePreset} onChange={handleThemePresetChange}>
+              {THEME_PRESET_NAMES.map((name) => (
+                <option key={name} value={name}>{THEME_PRESETS[name].label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label>Accent Color</label>
+            <div className="color-input-row">
+              <input
+                type="color"
+                value={accentColor}
+                onChange={handleAccentColorChange}
+                className="color-picker"
+              />
+              <input
+                type="text"
+                value={accentColor}
+                onChange={handleAccentColorChange}
+                placeholder="#9146FF"
+                className="color-text"
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Chat Font Size: {chatFontSize}px</label>
+            <input
+              type="range"
+              min="10"
+              max="20"
+              value={chatFontSize}
+              onChange={handleFontSizeChange}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Chat Spacing</label>
+            <select value={chatSpacing} onChange={handleSpacingChange}>
+              <option value="compact">Compact</option>
+              <option value="normal">Normal</option>
+              <option value="cozy">Cozy</option>
+            </select>
+          </div>
         </div>
       </div>
 

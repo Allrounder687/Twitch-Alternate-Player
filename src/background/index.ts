@@ -94,6 +94,7 @@ chrome.runtime.onInstalled.addListener((details) => {
       twitchUsername: '',
       showAdNotifications: true,
       layout: 'balanced',
+      theme: { preset: 'twitch-dark', custom: {} },
     });
 
     chrome.tabs.create({ url: 'popup.html' });

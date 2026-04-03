@@ -4,6 +4,7 @@ import { createCustomControls } from './ControlsUI';
 import { TwitchChat } from './TwitchChat';
 import { ChannelPointsClaimer } from './ChannelPointsClaimer';
 import { ToastManager } from './ToastManager';
+import { ThemeManager } from './ThemeManager';
 
 export class PlayerContainer {
   private container: HTMLDivElement | null = null;
@@ -19,6 +20,7 @@ export class PlayerContainer {
   private toastManager: ToastManager | null = null;
   private toastHandler: ((e: Event) => void) | null = null;
   private dragCleanup: (() => void) | null = null;
+  private themeManager: ThemeManager | null = null;
 
   public mount(streamerName: string, volume: number = 50, quality: string = 'auto') {
     if (this.container) {
@@ -134,6 +136,10 @@ export class PlayerContainer {
       }
     });
     video.addEventListener('twitch-show-toast', this.toastHandler);
+
+    // Initialize Theme Manager
+    this.themeManager = new ThemeManager(this.container);
+    this.themeManager.loadAndApply();
 
     // Trigger animation
     requestAnimationFrame(() => {
@@ -308,6 +314,8 @@ export class PlayerContainer {
       this.dragCleanup();
       this.dragCleanup = null;
     }
+
+    this.themeManager = null;
 
     if (this.toastManager) {
       this.toastManager.destroy();
