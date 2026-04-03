@@ -216,11 +216,23 @@ export function createCustomControls(
   const theaterBtn = controlsBar.querySelector('.theater-btn') as HTMLButtonElement;
   theaterBtn.addEventListener('click', () => {
     // Proxy the click to Twitch's native theater mode button for robust layout integration
-    const nativeBtn = document.querySelector('[data-a-target="player-theatre-mode-button"]') as HTMLButtonElement;
+    const selectors = [
+      '[data-a-target="player-theatre-mode-button"]',
+      '[data-a-target="right-control-theater-mode-button"]',
+      '[data-a-target="core-player-theater-mode-button"]',
+      'button[aria-label*="Theater Mode"]'
+    ];
+    
+    let nativeBtn: HTMLElement | null = null;
+    for (const s of selectors) {
+      nativeBtn = document.querySelector(s) as HTMLElement;
+      if (nativeBtn) break;
+    }
+
     if (nativeBtn) {
       nativeBtn.click();
     } else {
-      console.warn('[Alt Player] Native theater mode button not found');
+      console.warn('[Alt Player] Native theater mode button not found using any known selector.');
     }
   });
 
