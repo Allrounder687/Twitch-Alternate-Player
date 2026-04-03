@@ -1,4 +1,5 @@
 import { getStreamToken, getStreamUrl } from './twitch-api';
+import { migrateSettings } from '../content/player/ChannelSettings';
 
 // ── MV3: onMessage MUST be registered synchronously at the top level ──
 // Stream URL Cache for pre-fetching
@@ -97,6 +98,9 @@ chrome.runtime.onInstalled.addListener((details) => {
 
     chrome.tabs.create({ url: 'popup.html' });
   }
+
+  // Run migration on install or update
+  migrateSettings();
 });
 
 // Update the extension icon based on the enabled/disabled state

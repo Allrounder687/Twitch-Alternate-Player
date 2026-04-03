@@ -1,5 +1,6 @@
 console.log('[Twitch Player] Content script loading...');
 import { playerInstance } from './player/PlayerContainer';
+import { getChannelSettings } from './player/ChannelSettings';
 
 function getStreamerNameFromUrl(): string | null {
   const path = window.location.pathname.split('/');
@@ -81,13 +82,19 @@ if (isContextValid()) {
   });
 }
 
-const checkAndMount = () => {
+const checkAndMount = async () => {
   const streamerName = getStreamerNameFromUrl();
 
   if (playerEnabled && streamerName) {
     if (currentStreamer !== streamerName) {
       currentStreamer = streamerName;
-      playerInstance.mount(streamerName, currentVolume, currentQuality);
+      // Load per-channel settings merged with globals
+      const settings = await getChannelSettings(streamerName);
+      playerInstance.mount(
+        streamerName,
+        settings.volume ?? currentVolume,
+        settings.quality ?? currentQuality
+      );
     }
   } else if (!streamerName || !playerEnabled) {
     currentStreamer = null;

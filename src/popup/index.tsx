@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import { resetChannelSettings } from '../content/player/ChannelSettings';
 
 type LatencyMode = 'ultra-low' | 'balanced' | 'stable';
 
@@ -269,6 +270,34 @@ const App: React.FC = () => {
           <p className="info-text">
             The player filters ad segments from the stream playlist. This may not catch all ads.
           </p>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <span className="section-title">Per-Channel Settings</span>
+        <div className="settings">
+          <p className="info-text">
+            Settings are saved per-channel when you change them while watching a stream.
+            Channel-specific settings override global defaults.
+          </p>
+          {streamerName && (
+            <button
+              className="reset-btn"
+              onClick={() => {
+                resetChannelSettings(streamerName);
+                // Reload settings from global defaults
+                chrome.storage.sync.get(['quality', 'volume', 'chatEnabled', 'latencyMode', 'layout'], (data) => {
+                  setVolume(data.volume || 50);
+                  setQuality(data.quality || 'auto');
+                  setChatEnabled(data.chatEnabled !== false);
+                  setLatencyMode(data.latencyMode || 'balanced');
+                  setLayout(data.layout || 'balanced');
+                });
+              }}
+            >
+              Reset "{streamerName}" to Defaults
+            </button>
+          )}
         </div>
       </div>
 
