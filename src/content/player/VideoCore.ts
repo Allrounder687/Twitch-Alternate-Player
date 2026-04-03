@@ -88,6 +88,8 @@ export function attachVideo(
 
         hlsInstance = new Hls({
           maxLiveSyncPlaybackRate: 1.5,
+          liveSyncDurationCount: 3, // Target 3 segments from edge (~6s latency vs default 30s)
+          liveMaxLatencyDurationCount: 10,
           pLoader: AdBypassPlaylistLoader as any,
         });
 
@@ -137,6 +139,36 @@ export function attachVideo(
       } else {
         showError('Your browser does not support HLS stream playback.');
       }
+      
+      // Auto-Freeze Recovery (Watchdog)
+      let lastTime = -1;
+      let freezeCount = 0;
+      let watchdogInterval = window.setInterval(() => {
+        if (isDestroyed) {
+          window.clearInterval(watchdogInterval);
+          return;
+        }
+        
+        if (!videoElement.paused && !videoElement.seeking) {
+          if (videoElement.currentTime === lastTime) {
+            freezeCount++;
+            if (freezeCount > 4) { // Frozen for ~4 seconds
+              console.warn('[Alt Player] Stream freeze detected, recovering...');
+              if (hlsInstance) {
+                hlsInstance.recoverMediaError();
+              } else {
+                videoElement.load();
+                videoElement.play().catch(() => {});
+              }
+              freezeCount = 0;
+            }
+          } else {
+            freezeCount = 0;
+            lastTime = videoElement.currentTime;
+          }
+        }
+      }, 1000);
+
     } catch (err: any) {
       console.error("Stream init error:", err);
       showError(err.message || 'Error occurred loading the stream.');

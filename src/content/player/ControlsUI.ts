@@ -240,6 +240,11 @@ export function createCustomControls(
         videoElement.volume = down;
         volSlider.value = (down * 100).toString();
         break;
+      case 'KeyJ':
+        // Instant Replay (backward 10s)
+        e.preventDefault();
+        videoElement.currentTime = Math.max(0, videoElement.currentTime - 10);
+        break;
     }
   };
   window.addEventListener('keydown', keydownHandler);
