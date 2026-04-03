@@ -1,4 +1,5 @@
 import type { VideoController, HlsQualityLevel, StreamStats } from './VideoCore';
+import { LAYOUT_PRESETS, PRESET_NAMES, applyLayoutPreset } from './LayoutPresets';
 
 export function createCustomControls(
   videoContainer: HTMLElement,
@@ -42,6 +43,9 @@ export function createCustomControls(
       <button class="ctrl-btn switch-default-btn" title="Return to Twitch Player">Default Player</button>
       <button class="ctrl-btn chat-toggle-btn" title="Toggle Chat">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+      </button>
+      <button class="ctrl-btn layout-btn" title="Layout Preset">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
       </button>
       <button class="ctrl-btn settings-btn" title="Quality">Quality</button>
       <button class="ctrl-btn popout-btn" title="Pop-Out Player">
@@ -131,6 +135,37 @@ export function createCustomControls(
   });
 
   updateSettingsUI();
+
+  // === LAYOUT PRESET DROPDOWN ===
+  const layoutDropdown = document.createElement('div');
+  layoutDropdown.className = 'layout-dropdown';
+  let currentLayout = 'balanced';
+
+  const updateLayoutDropdown = () => {
+    layoutDropdown.innerHTML = PRESET_NAMES.map((name) => {
+      const preset = LAYOUT_PRESETS[name];
+      return `<div class="layout-option ${name === currentLayout ? 'selected' : ''}" data-layout="${name}">${preset.label}</div>`;
+    }).join('');
+
+    layoutDropdown.querySelectorAll('.layout-option').forEach((opt) => {
+      opt.addEventListener('click', () => {
+        const name = opt.getAttribute('data-layout') || 'balanced';
+        currentLayout = name;
+        const host = videoContainer.closest('#kreo-twitch-player-host') as HTMLElement;
+        if (host) applyLayoutPreset(host, chatContainer, name);
+        updateLayoutDropdown();
+        layoutDropdown.classList.remove('active');
+      });
+    });
+  };
+
+  chrome.storage.sync.get(['layout'], (data) => {
+    currentLayout = data.layout || 'balanced';
+    updateLayoutDropdown();
+    // Apply on load
+    const host = videoContainer.closest('#kreo-twitch-player-host') as HTMLElement;
+    if (host) applyLayoutPreset(host, chatContainer, currentLayout);
+  });
 
   // === STATS OVERLAY ===
   const statsOverlay = document.createElement('div');
@@ -226,6 +261,7 @@ export function createCustomControls(
 
   videoContainer.appendChild(controlsBar);
   videoContainer.appendChild(settingsModal);
+  videoContainer.appendChild(layoutDropdown);
   videoContainer.appendChild(statsOverlay);
 
   // === Auto-hide UI ===
@@ -257,6 +293,7 @@ export function createCustomControls(
   const statsBtn = controlsBar.querySelector('.stats-btn') as HTMLButtonElement;
   const audioOnlyBtn = controlsBar.querySelector('.audio-only-btn') as HTMLButtonElement;
   const popoutBtn = controlsBar.querySelector('.popout-btn') as HTMLButtonElement;
+  const layoutBtn = controlsBar.querySelector('.layout-btn') as HTMLButtonElement;
 
   // === Switch to default player ===
   switchDefaultBtn.addEventListener('click', () => {
@@ -345,11 +382,15 @@ export function createCustomControls(
   settingsBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     settingsModal.classList.toggle('active');
+    layoutDropdown.classList.remove('active');
   });
 
   const closeSettingsHandler = (e: MouseEvent) => {
     if (!settingsModal.contains(e.target as Node) && !settingsBtn.contains(e.target as Node)) {
       settingsModal.classList.remove('active');
+    }
+    if (!layoutDropdown.contains(e.target as Node) && !layoutBtn.contains(e.target as Node)) {
+      layoutDropdown.classList.remove('active');
     }
   };
   document.addEventListener('click', closeSettingsHandler);
@@ -365,6 +406,13 @@ export function createCustomControls(
     } catch (e: any) {
       console.error('[Alt Player] PiP failed:', e?.message || String(e));
     }
+  });
+
+  // === Layout Preset Toggle ===
+  layoutBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    layoutDropdown.classList.toggle('active');
+    settingsModal.classList.remove('active');
   });
 
   // === Pop-Out Player ===

@@ -92,6 +92,7 @@ chrome.runtime.onInstalled.addListener((details) => {
       autoClaimPoints: true,
       twitchUsername: '',
       showAdNotifications: true,
+      layout: 'balanced',
     });
 
     chrome.tabs.create({ url: 'popup.html' });

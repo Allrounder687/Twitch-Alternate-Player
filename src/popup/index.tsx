@@ -27,11 +27,12 @@ const App: React.FC = () => {
   const [autoClaimPoints, setAutoClaimPoints] = useState<boolean>(true);
   const [twitchUsername, setTwitchUsername] = useState<string>('');
   const [showAdNotifications, setShowAdNotifications] = useState<boolean>(true);
+  const [layout, setLayout] = useState<string>('balanced');
 
   useEffect(() => {
     chrome.storage.sync.get(
       ['isEnabled', 'streamerName', 'volume', 'quality', 'latencyMode', 'lowLatency',
-       'chatEnabled', 'emoteProviders', 'autoClaimPoints', 'twitchUsername', 'showAdNotifications'],
+       'chatEnabled', 'emoteProviders', 'autoClaimPoints', 'twitchUsername', 'showAdNotifications', 'layout'],
       (data) => {
         setIsEnabled(data.isEnabled || false);
         setStreamerName(data.streamerName || '');
@@ -48,6 +49,7 @@ const App: React.FC = () => {
         setAutoClaimPoints(data.autoClaimPoints !== false);
         setTwitchUsername(data.twitchUsername || '');
         setShowAdNotifications(data.showAdNotifications !== false);
+        setLayout(data.layout || 'balanced');
       }
     );
   }, []);
@@ -112,6 +114,12 @@ const App: React.FC = () => {
     const name = e.target.value;
     setTwitchUsername(name);
     chrome.storage.sync.set({ twitchUsername: name });
+  };
+
+  const handleLayoutChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newLayout = e.target.value;
+    setLayout(newLayout);
+    chrome.storage.sync.set({ layout: newLayout });
   };
 
   const handleAdNotificationsToggle = () => {
@@ -185,6 +193,16 @@ const App: React.FC = () => {
             <input type="checkbox" checked={chatEnabled} onChange={handleChatToggle} />
             <span className="slider round"></span>
           </label>
+        </div>
+
+        <div className="form-group">
+          <label>Layout Preset</label>
+          <select value={layout} onChange={handleLayoutChange}>
+            <option value="balanced">Balanced</option>
+            <option value="minimalist">Minimalist</option>
+            <option value="chatFocused">Chat Focused</option>
+            <option value="theater">Theater</option>
+          </select>
         </div>
       </div>
 

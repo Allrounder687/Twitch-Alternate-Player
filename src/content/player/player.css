@@ -296,6 +296,69 @@ video {
   font-size: 8px;
 }
 
+/* Layout Dropdown */
+.layout-dropdown {
+  position: absolute;
+  bottom: 60px;
+  right: 120px;
+  background: rgba(15, 15, 18, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 0;
+  border-radius: 8px;
+  font-size: 13px;
+  width: 160px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  transform: translateY(10px);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 100;
+}
+
+.layout-dropdown.active {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+}
+
+.layout-option {
+  padding: 8px 16px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.2s;
+  color: #efeff1;
+}
+
+.layout-option:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.layout-option.selected {
+  color: var(--accent-color);
+  background: rgba(145, 70, 255, 0.1);
+}
+
+.layout-option.selected::after {
+  content: '\25CF';
+  font-size: 8px;
+}
+
+/* Layout Preset Styles */
+#kreo-twitch-player-host.layout-minimalist .chat-container {
+  display: none !important;
+}
+
+#kreo-twitch-player-host.layout-chat-focused .chat-container {
+  width: 480px;
+}
+
+#kreo-twitch-player-host.layout-theater .chat-container {
+  display: none !important;
+}
+
 /* Stats Overlay */
 .stats-overlay {
   position: absolute;
