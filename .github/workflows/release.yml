@@ -1,0 +1,57 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'   # triggers on tags like v2.0.0, v2.1.0, etc.
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build extension and publish release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Zip the dist folder
+        run: |
+          cd dist
+          zip -r ../twitch-alternate-player-${{ github.ref_name }}.zip .
+          cd ..
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Twitch Alternate Player ${{ github.ref_name }}"
+          body: |
+            ## Installation
+
+            1. Download **twitch-alternate-player-${{ github.ref_name }}.zip** below
+            2. Extract the zip to a folder on your computer
+            3. Open Chrome or Edge and go to `chrome://extensions/`
+            4. Enable **Developer Mode** (toggle in the top-right corner)
+            5. Click **"Load unpacked"** and select the extracted folder
+            6. Click the extension icon in your toolbar, enter a streamer name, and enable the player
+
+            ---
+
+            See the [README](https://github.com/${{ github.repository }}#readme) for the full feature list and documentation.
+          files: twitch-alternate-player-${{ github.ref_name }}.zip
+          draft: false
+          prerelease: false
