@@ -8,13 +8,64 @@
 ![hls.js](https://img.shields.io/badge/Streaming-hls.js-FF6600)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
-![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen)
+[![Latest Release](https://img.shields.io/github/v/release/Allrounder687/Twitch-Alternate-Player?label=latest%20release&color=blueviolet)](https://github.com/Allrounder687/Twitch-Alternate-Player/releases/latest)
 
 ---
 
 ## ✨ What It Does
 
 Twitch Alternate Player intercepts Twitch stream playlists via a Manifest V3 background service worker, filters ad segments before playback, and injects a fully custom player, chat, and controls interface into any Twitch page. Everything runs locally — no servers, no proxies.
+
+---
+
+## 📦 Installation
+
+### ⭐ Option 1: Download the Pre-Built Release (Recommended)
+
+> No build tools or Node.js required.
+
+1. Go to the **[Releases page](https://github.com/Allrounder687/Twitch-Alternate-Player/releases/latest)**
+2. Download **`twitch-alternate-player-vX.X.X.zip`** under **Assets**
+3. Extract the zip to any folder on your computer
+4. Open **Chrome** or **Edge** and navigate to:
+   - Chrome: `chrome://extensions/`
+   - Edge: `edge://extensions/`
+5. Enable **Developer Mode** using the toggle in the top-right corner
+6. Click **"Load unpacked"** and select the folder you extracted
+7. The extension icon will appear in your toolbar — click it, enter a Twitch channel name, and enable the player
+
+> ⚠️ **Why "Developer Mode"?** This extension is not on the Chrome Web Store, so it must be side-loaded. Developer Mode is safe — it simply allows loading extensions from local folders.
+
+---
+
+### 🔧 Option 2: Build from Source
+
+For developers who want to modify or contribute to the extension.
+
+**Prerequisites:** Node.js ≥ 18, Chrome or Edge
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/Allrounder687/Twitch-Alternate-Player.git
+cd Twitch-Alternate-Player
+
+# 2. Install dependencies
+npm install
+
+# 3. Build the extension
+npm run build
+```
+
+Then follow steps 4–7 from Option 1, selecting the `dist/` folder instead of the extracted zip.
+
+---
+
+### 🔄 Updating the Extension
+
+When a new release is available:
+1. Download the new zip from the [Releases page](https://github.com/Allrounder687/Twitch-Alternate-Player/releases/latest)
+2. Extract it, **replacing the contents of your existing folder**
+3. Go to `chrome://extensions/` and click the **refresh icon** on the extension card
 
 ---
 
@@ -88,35 +139,6 @@ Beyond presets, you can customize:
 
 ---
 
-## 🛠️ Installation
-
-### Prerequisites
-- Node.js ≥ 18
-- Chrome or Edge browser (any Chromium-based browser)
-
-### Build from Source
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/Allrounder687/Twitch-Alternate-Player.git
-cd Twitch-Alternate-Player
-
-# 2. Install dependencies
-npm install
-
-# 3. Build the extension
-npm run build
-```
-
-### Load in Chrome / Edge
-
-1. Open `chrome://extensions/` (or `edge://extensions/`)
-2. Enable **Developer Mode** (toggle in the top-right)
-3. Click **"Load unpacked"**
-4. Select the `dist/` folder
-
----
-
 ## 💻 Development
 
 ```bash
@@ -127,6 +149,17 @@ npm run dev
 Then load the `dist/` folder as an unpacked extension. The extension will reflect changes after a page reload.
 
 > **Tip:** Background service worker changes require a full extension reload (`chrome://extensions/` → refresh icon). Content script changes only need a Twitch tab reload.
+
+### Creating a Release
+
+Push a version tag and GitHub Actions will automatically build the extension and attach the zip to a new GitHub Release:
+
+```bash
+git tag v2.1.0
+git push origin v2.1.0
+```
+
+The workflow in `.github/workflows/release.yml` will run `npm run build`, zip the `dist/` folder, and publish the release within ~2 minutes.
 
 ---
 
@@ -167,7 +200,7 @@ src/
 
 **Data flow:**
 1. User opens Twitch → content script injected → checks `chrome.storage.sync` for `isEnabled`
-2. If enabled, `PlayerContainer` mounts the custom player, hides Twitch's native UI
+2. If enabled, `PlayerContainer` mounts the custom player, hides Twitch’s native UI
 3. Background worker fetches stream token → constructs HLS M3U8 URL
 4. `VideoCore` initializes `hls.js`, loads the stream, filters ad segments
 5. `TwitchChat` connects to Twitch IRC via WebSocket, renders messages with emotes
@@ -192,7 +225,7 @@ src/
 
 ## 🤝 Contributing
 
-Contributions are welcome and appreciated! Whether it's a bug fix, a new theme preset, a new layout, or a feature — all PRs are considered.
+Contributions are welcome and appreciated! Whether it’s a bug fix, a new theme preset, a new layout, or a feature — all PRs are considered.
 
 **Quick start:**
 
@@ -211,7 +244,7 @@ npm run dev
 
 Please read **[CONTRIBUTING.md](./CONTRIBUTING.md)** for full guidelines including:
 - Coding standards and TypeScript conventions
-- How to add a new theme preset (it's easy!)
+- How to add a new theme preset (it’s easy!)
 - PR checklist and review process
 - How to report bugs and request features
 
@@ -225,7 +258,7 @@ New to the codebase? Look for issues labelled [`good first issue`](../../issues?
 - 🎨 **New theme presets** — creative themes (e.g. Catppuccin, Nord, Dracula) are easy to add and great for first contributions
 - 🇦🇨 **i18n / localization** — the UI is English-only today
 - 📄 **Docs** — screenshots, GIFs, wiki pages, anything that helps new users get started faster
-- 🔍 **Bug reports** — if something doesn't work on your stream or browser version, please open an issue
+- 🔍 **Bug reports** — if something doesn’t work on your stream or browser version, please open an issue
 
 ---
 
