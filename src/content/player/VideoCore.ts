@@ -32,6 +32,8 @@ export function attachVideo(
   let hlsInstance: Hls | null = null;
   let isDestroyed = false;
   let watchdogInterval: number | null = null;
+  let recoveryAttempts = 0;
+  let currentStreamUrl = '';
 
   // Clip recording state
   let mediaRecorder: MediaRecorder | null = null;
@@ -45,16 +47,71 @@ export function attachVideo(
   const statsListeners: Array<(stats: StreamStats) => void> = [];
   let statsInterval: number | null = null;
 
-  const showError = (msg: string) => {
+  const showError = (msg: string, showReload = false) => {
     if (isDestroyed) return;
     loaderElement.classList.remove('active');
-    errorElement.innerText = msg;
+    if (showReload) {
+      errorElement.innerHTML = `${msg}<br><button class="error-reload-btn">Reload Stream</button>`;
+      const reloadBtn = errorElement.querySelector('.error-reload-btn');
+      reloadBtn?.addEventListener('click', () => {
+        errorElement.classList.remove('active');
+        loaderElement.classList.add('active');
+        recoveryAttempts = 0;
+        initStream();
+      });
+    } else {
+      errorElement.innerText = msg;
+    }
     errorElement.classList.add('active');
+  };
+
+  const showToast = (message: string, type: string = 'info') => {
+    videoElement.dispatchEvent(new CustomEvent('twitch-show-toast', {
+      detail: { message, type },
+    }));
   };
 
   const hideLoader = () => {
     if (isDestroyed) return;
     loaderElement.classList.remove('active');
+  };
+
+  const handleGracefulFallback = () => {
+    if (isDestroyed) return;
+    recoveryAttempts++;
+
+    if (recoveryAttempts === 1) {
+      // First attempt: retry with lower quality
+      showToast('Switching to lower quality...', 'warning');
+      if (hlsInstance) {
+        const levels = hlsInstance.levels;
+        if (levels && levels.length > 1) {
+          // Find a level lower than current
+          const currentLevel = hlsInstance.currentLevel;
+          const lowerLevel = Math.max(0, currentLevel - 1);
+          hlsInstance.currentLevel = lowerLevel;
+          hlsInstance.startLoad();
+        } else {
+          hlsInstance.startLoad();
+        }
+      }
+    } else if (recoveryAttempts === 2) {
+      // Second attempt: reload stream token
+      showToast('Reloading stream token...', 'warning');
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
+      }
+      initStream();
+    } else {
+      // Third attempt: show error with reload button
+      showToast('Stream failed — click to reload', 'error');
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
+      }
+      showError('Stream failed to load.', true);
+    }
   };
 
   const getStats = (): StreamStats => {
@@ -118,14 +175,16 @@ export function attachVideo(
       if (isDestroyed) return;
 
       const mediaSourceUrl = response.url;
+      currentStreamUrl = mediaSourceUrl;
 
-      // Load low-latency preference
+      // Load latency mode preference
       const settings = await new Promise<Record<string, any>>((resolve) => {
-        chrome.storage.sync.get(['lowLatency'], (data) => {
+        chrome.storage.sync.get(['latencyMode', 'lowLatency'], (data) => {
           resolve(data);
         });
       });
-      const lowLatency = settings.lowLatency !== false; // default true
+      // Migrate from old boolean to tri-state
+      const latencyMode: string = settings.latencyMode || (settings.lowLatency !== false ? 'balanced' : 'stable');
 
       if (Hls.isSupported()) {
         // Ad bypass playlist loader
@@ -160,20 +219,8 @@ export function attachVideo(
         }
 
         const hlsConfig: Partial<typeof Hls.DefaultConfig> = {
-          maxLiveSyncPlaybackRate: 1.5,
           pLoader: AdBypassPlaylistLoader as any,
-          // Low-latency settings
-          ...(lowLatency
-            ? {
-                liveSyncDurationCount: 2,
-                liveMaxLatencyDurationCount: 5,
-                lowLatencyMode: true,
-                backBufferLength: 30,
-              }
-            : {
-                liveSyncDurationCount: 5,
-                liveMaxLatencyDurationCount: 15,
-              }),
+          ...getLatencyConfig(latencyMode),
         };
 
         hlsInstance = new Hls(hlsConfig);
@@ -212,10 +259,27 @@ export function attachVideo(
             hlsInstance.nextLoadLevel = highestLevel;
           }
 
-          videoElement.play().catch(() => {
-            videoElement.muted = true;
-            videoElement.play().catch((e) => console.warn('[Alt Player] Autoplay failed:', e?.message || String(e)));
-          });
+          const tryPlay = () => {
+            videoElement.play().catch((err) => {
+              if (err.name === 'AbortError') {
+                setTimeout(() => {
+                  videoElement.play().catch(() => {
+                    videoElement.muted = true;
+                    videoElement.play().catch(() => {});
+                  });
+                }, 200);
+              } else if (err.name === 'NotAllowedError') {
+                videoElement.muted = true;
+                videoElement.play().catch(() => {});
+              }
+            });
+          };
+
+          if (videoElement.readyState >= 3) {
+            tryPlay();
+          } else {
+            videoElement.addEventListener('canplay', tryPlay, { once: true });
+          }
         });
 
         hlsInstance.on(Hls.Events.ERROR, (_event, data) => {
@@ -223,16 +287,17 @@ export function attachVideo(
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
                 console.error('[Alt Player] Fatal network error, recovering...');
+                showToast('Stream interrupted — retrying...', 'warning');
                 hlsInstance?.startLoad();
                 break;
               case Hls.ErrorTypes.MEDIA_ERROR:
                 console.error('[Alt Player] Fatal media error, recovering...');
+                showToast('Media error — recovering...', 'warning');
                 hlsInstance?.recoverMediaError();
                 break;
               default:
                 console.error('[Alt Player] Fatal error:', JSON.stringify({ type: data.type, details: data.details }));
-                hlsInstance?.destroy();
-                showError('Stream failed to load (Fatal Error).');
+                handleGracefulFallback();
                 break;
             }
           }
@@ -248,10 +313,27 @@ export function attachVideo(
         videoElement.src = mediaSourceUrl;
         videoElement.addEventListener('loadedmetadata', () => {
           hideLoader();
-          videoElement.play().catch(() => {
-            videoElement.muted = true;
-            videoElement.play().catch((e) => console.warn('[Alt Player] Autoplay fallback failed:', e?.message || String(e)));
-          });
+          const tryPlay = () => {
+            videoElement.play().catch((err) => {
+              if (err.name === 'AbortError') {
+                setTimeout(() => {
+                  videoElement.play().catch(() => {
+                    videoElement.muted = true;
+                    videoElement.play().catch(() => {});
+                  });
+                }, 200);
+              } else if (err.name === 'NotAllowedError') {
+                videoElement.muted = true;
+                videoElement.play().catch(() => {});
+              }
+            });
+          };
+
+          if (videoElement.readyState >= 3) {
+            tryPlay();
+          } else {
+            videoElement.addEventListener('canplay', tryPlay, { once: true });
+          }
         });
       } else {
         showError('Your browser does not support HLS stream playback.');
@@ -410,12 +492,18 @@ export function attachVideo(
 
     isRecording: () => mediaRecorder !== null && mediaRecorder.state === 'recording',
 
-    setLowLatency: (enabled: boolean) => {
+    getStreamUrl: () => currentStreamUrl,
+
+    setLatencyMode: (mode: string) => {
       if (!hlsInstance) return;
-      hlsInstance.config.liveSyncDurationCount = enabled ? 2 : 5;
-      hlsInstance.config.liveMaxLatencyDurationCount = enabled ? 5 : 15;
-      (hlsInstance.config as any).lowLatencyMode = enabled;
-      chrome.storage.sync.set({ lowLatency: enabled });
+      const config = getLatencyConfig(mode);
+      hlsInstance.config.liveSyncDurationCount = config.liveSyncDurationCount!;
+      hlsInstance.config.liveMaxLatencyDurationCount = config.liveMaxLatencyDurationCount!;
+      (hlsInstance.config as any).lowLatencyMode = config.lowLatencyMode ?? false;
+      if (config.maxLiveSyncPlaybackRate !== undefined) {
+        hlsInstance.config.maxLiveSyncPlaybackRate = config.maxLiveSyncPlaybackRate;
+      }
+      chrome.storage.sync.set({ latencyMode: mode });
     },
 
     cleanup: () => {
@@ -440,6 +528,34 @@ export function attachVideo(
   return controller;
 }
 
+function getLatencyConfig(mode: string): Partial<typeof Hls.DefaultConfig> {
+  switch (mode) {
+    case 'ultra-low':
+      return {
+        liveSyncDurationCount: 1,
+        liveMaxLatencyDurationCount: 3,
+        lowLatencyMode: true,
+        maxLiveSyncPlaybackRate: 1.5,
+        backBufferLength: 30,
+      };
+    case 'stable':
+      return {
+        liveSyncDurationCount: 6,
+        liveMaxLatencyDurationCount: 20,
+        lowLatencyMode: false,
+      };
+    case 'balanced':
+    default:
+      return {
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 8,
+        lowLatencyMode: true,
+        maxLiveSyncPlaybackRate: 1.2,
+        backBufferLength: 30,
+      };
+  }
+}
+
 function buildQualityName(level: { height: number; bitrate: number; attrs?: Record<string, any> }): string {
   if (level.attrs?.NAME) return level.attrs.NAME as string;
   if (level.height === 0 || level.bitrate < 200000) return 'Audio Only';
@@ -457,6 +573,7 @@ export interface VideoController {
   startClip: () => Promise<Blob | null>;
   stopClip: () => void;
   isRecording: () => boolean;
-  setLowLatency: (enabled: boolean) => void;
+  setLatencyMode: (mode: string) => void;
+  getStreamUrl: () => string;
   cleanup: () => void;
 }

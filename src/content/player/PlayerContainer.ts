@@ -2,6 +2,13 @@ import './player.css';
 import { attachVideo, VideoController } from './VideoCore';
 import { createCustomControls } from './ControlsUI';
 import { TwitchChat } from './TwitchChat';
+import { ChannelPointsClaimer } from './ChannelPointsClaimer';
+import { ToastManager } from './ToastManager';
+import { ThemeManager } from './ThemeManager';
+import { TwitchFeatures } from './TwitchFeatures';
+import { MultiStreamManager } from './MultiStreamManager';
+import { PublicAPI } from './PublicAPI';
+import { ModTools } from './ModTools';
 
 export class PlayerContainer {
   private container: HTMLDivElement | null = null;
@@ -13,6 +20,15 @@ export class PlayerContainer {
   private originalStates = new Map<HTMLVideoElement, { muted: boolean; paused: boolean }>();
   private observer: IntersectionObserver | null = null;
   private twitchChat: TwitchChat | null = null;
+  private channelPointsClaimer: ChannelPointsClaimer | null = null;
+  private toastManager: ToastManager | null = null;
+  private toastHandler: ((e: Event) => void) | null = null;
+  private dragCleanup: (() => void) | null = null;
+  private themeManager: ThemeManager | null = null;
+  private twitchFeatures: TwitchFeatures | null = null;
+  private multiStreamManager: MultiStreamManager | null = null;
+  private publicAPI: PublicAPI | null = null;
+  private modTools: ModTools | null = null;
 
   public mount(streamerName: string, volume: number = 50, quality: string = 'auto') {
     if (this.container) {
@@ -77,6 +93,10 @@ export class PlayerContainer {
       }
     });
 
+    // Mini drag handle (title bar area)
+    const miniDragBar = document.createElement('div');
+    miniDragBar.className = 'mini-drag-bar';
+
     // Mini Close Button
     const miniClose = document.createElement('button');
     miniClose.className = 'mini-close-btn';
@@ -86,10 +106,19 @@ export class PlayerContainer {
       this.container?.classList.remove('mini-mode');
     };
 
+    // Mini resize handle
+    const miniResize = document.createElement('div');
+    miniResize.className = 'mini-resize-handle';
+
     this.container.appendChild(videoContainer);
     this.container.appendChild(chatContainer);
+    this.container.appendChild(miniDragBar);
     this.container.appendChild(miniClose);
+    this.container.appendChild(miniResize);
     target.appendChild(this.container);
+
+    // Setup mini-player drag & resize
+    this.setupMiniDragResize(miniDragBar, miniResize);
 
     // Attach HLS logic (returns controller)
     this.videoController = attachVideo(video, streamerName, loader, errorMsg);
@@ -106,6 +135,23 @@ export class PlayerContainer {
     );
     this.controlsCleanup = controls.cleanup;
 
+    // Add aria-live and role to chat messages container (will be set after chat init)
+    // Done after TwitchChat creates the message list element
+
+    // Initialize Toast Manager
+    this.toastManager = new ToastManager(videoContainer);
+    this.toastHandler = ((e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail && this.toastManager) {
+        this.toastManager.show(detail.message, detail.type || 'info');
+      }
+    });
+    video.addEventListener('twitch-show-toast', this.toastHandler);
+
+    // Initialize Theme Manager
+    this.themeManager = new ThemeManager(this.container);
+    this.themeManager.loadAndApply();
+
     // Trigger animation
     requestAnimationFrame(() => {
       if (this.container) this.container.classList.add('active');
@@ -114,6 +160,35 @@ export class PlayerContainer {
     // Initialize IRC Chat
     this.twitchChat = new TwitchChat(streamerName, chatContainer);
     this.twitchChat.connect();
+
+    // Accessibility: add role="log" and aria-live to chat messages container
+    const chatMsgs = chatContainer.querySelector('.irc-chat-messages');
+    if (chatMsgs) {
+      chatMsgs.setAttribute('role', 'log');
+      chatMsgs.setAttribute('aria-live', 'polite');
+      chatMsgs.setAttribute('aria-label', 'Chat messages');
+    }
+
+    // Phase 3: Initialize Predictions/Polls/Drops display
+    this.twitchFeatures = new TwitchFeatures(streamerName, controls.controlsBar, videoContainer);
+
+    // Phase 3: Initialize Multi-Stream Manager
+    this.multiStreamManager = new MultiStreamManager(this.container, videoContainer);
+    this.multiStreamManager.init(controls.controlsBar);
+
+    // Phase 3: Initialize Public API
+    this.publicAPI = new PublicAPI(video, this.videoController, streamerName);
+    this.publicAPI.init();
+
+    // Phase 3: Initialize Mod Tools
+    this.modTools = new ModTools(streamerName, controls.controlsBar, videoContainer, chatContainer);
+
+    // Initialize Channel Points Claimer
+    chrome.storage.sync.get(['autoClaimPoints'], (data) => {
+      const enabled = data.autoClaimPoints !== false;
+      this.channelPointsClaimer = new ChannelPointsClaimer(enabled);
+      this.channelPointsClaimer.start();
+    });
 
     // Setup Sticky Mini-mode Observer
     this.observer = new IntersectionObserver(
@@ -132,6 +207,114 @@ export class PlayerContainer {
     this.observer.observe(target);
 
     this.startBaseVideoKiller();
+  }
+
+  private setupMiniDragResize(dragBar: HTMLElement, resizeHandle: HTMLElement) {
+    if (!this.container) return;
+    const host = this.container;
+
+    // Load persisted position/size
+    chrome.storage.sync.get(['miniPlayerPos'], (data) => {
+      if (data.miniPlayerPos) {
+        const { x, y, w, h } = data.miniPlayerPos;
+        host.style.setProperty('--mini-x', `${x}px`);
+        host.style.setProperty('--mini-y', `${y}px`);
+        if (w) host.style.setProperty('--mini-w', `${w}px`);
+        if (h) host.style.setProperty('--mini-h', `${h}px`);
+      }
+    });
+
+    // Drag
+    let isDragging = false;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+
+    const onDragStart = (e: MouseEvent) => {
+      if (!host.classList.contains('mini-mode')) return;
+      isDragging = true;
+      dragOffsetX = e.clientX - host.getBoundingClientRect().left;
+      dragOffsetY = e.clientY - host.getBoundingClientRect().top;
+      e.preventDefault();
+    };
+
+    const onDragMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      const x = e.clientX - dragOffsetX;
+      const y = e.clientY - dragOffsetY;
+      host.style.setProperty('--mini-x', `${x}px`);
+      host.style.setProperty('--mini-y', `${y}px`);
+      host.classList.add('mini-dragged');
+    };
+
+    const onDragEnd = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      // Persist position
+      const rect = host.getBoundingClientRect();
+      chrome.storage.sync.set({
+        miniPlayerPos: {
+          x: rect.left,
+          y: rect.top,
+          w: rect.width,
+          h: rect.height,
+        },
+      });
+    };
+
+    // Resize
+    let isResizing = false;
+    let resizeStartX = 0;
+    let resizeStartY = 0;
+    let startW = 0;
+    let startH = 0;
+
+    const onResizeStart = (e: MouseEvent) => {
+      if (!host.classList.contains('mini-mode')) return;
+      isResizing = true;
+      resizeStartX = e.clientX;
+      resizeStartY = e.clientY;
+      const rect = host.getBoundingClientRect();
+      startW = rect.width;
+      startH = rect.height;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const onResizeMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      // Resize from top-left corner (mini-player is anchored bottom-right by default)
+      const dw = resizeStartX - e.clientX;
+      const dh = resizeStartY - e.clientY;
+      const newW = Math.max(280, startW + dw);
+      const newH = Math.max(158, startH + dh);
+      host.style.setProperty('--mini-w', `${newW}px`);
+      host.style.setProperty('--mini-h', `${newH}px`);
+      host.classList.add('mini-dragged');
+    };
+
+    const onResizeEnd = () => {
+      if (!isResizing) return;
+      isResizing = false;
+      const rect = host.getBoundingClientRect();
+      chrome.storage.sync.set({
+        miniPlayerPos: {
+          x: rect.left,
+          y: rect.top,
+          w: rect.width,
+          h: rect.height,
+        },
+      });
+    };
+
+    dragBar.addEventListener('mousedown', onDragStart);
+    resizeHandle.addEventListener('mousedown', onResizeStart);
+    window.addEventListener('mousemove', (e) => { onDragMove(e); onResizeMove(e); });
+    window.addEventListener('mouseup', () => { onDragEnd(); onResizeEnd(); });
+
+    this.dragCleanup = () => {
+      dragBar.removeEventListener('mousedown', onDragStart);
+      resizeHandle.removeEventListener('mousedown', onResizeStart);
+    };
   }
 
   private startBaseVideoKiller() {
@@ -158,6 +341,48 @@ export class PlayerContainer {
     if (this.observer) {
       this.observer.disconnect();
       this.observer = null;
+    }
+
+    if (this.dragCleanup) {
+      this.dragCleanup();
+      this.dragCleanup = null;
+    }
+
+    this.themeManager = null;
+
+    if (this.publicAPI) {
+      this.publicAPI.destroy();
+      this.publicAPI = null;
+    }
+
+    if (this.twitchFeatures) {
+      this.twitchFeatures.destroy();
+      this.twitchFeatures = null;
+    }
+
+    if (this.multiStreamManager) {
+      this.multiStreamManager.destroy();
+      this.multiStreamManager = null;
+    }
+
+    if (this.modTools) {
+      this.modTools.destroy();
+      this.modTools = null;
+    }
+
+    if (this.toastManager) {
+      this.toastManager.destroy();
+      this.toastManager = null;
+    }
+
+    if (this.videoElement && this.toastHandler) {
+      this.videoElement.removeEventListener('twitch-show-toast', this.toastHandler);
+      this.toastHandler = null;
+    }
+
+    if (this.channelPointsClaimer) {
+      this.channelPointsClaimer.destroy();
+      this.channelPointsClaimer = null;
     }
 
     if (this.twitchChat) {

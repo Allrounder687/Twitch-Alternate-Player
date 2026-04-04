@@ -1,4 +1,5 @@
 import { getStreamToken, getStreamUrl } from './twitch-api';
+import { migrateSettings } from '../content/player/ChannelSettings';
 
 // ── MV3: onMessage MUST be registered synchronously at the top level ──
 // Stream URL Cache for pre-fetching
@@ -73,6 +74,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.action === 'OPEN_POPOUT') {
+    const popoutUrl = chrome.runtime.getURL(`popout.html?channel=${encodeURIComponent(message.channel)}`);
+    chrome.windows.create({
+      url: popoutUrl,
+      type: 'popup',
+      width: 640,
+      height: 360,
+      focused: true,
+    });
+    sendResponse({ status: 'opened' });
+    return false;
+  }
+
   // Fallback for any other messages
   sendResponse();
   return false;
@@ -86,12 +100,22 @@ chrome.runtime.onInstalled.addListener((details) => {
       streamerName: '',
       volume: 50,
       quality: 'auto',
-      lowLatency: true,
+      latencyMode: 'balanced',
       chatEnabled: true,
+      emoteProviders: { bttv: true, ffz: true, seventv: true },
+      autoClaimPoints: true,
+      twitchUsername: '',
+      showAdNotifications: true,
+      layout: 'balanced',
+      theme: { preset: 'twitch-dark', custom: {} },
+      multiStreams: [],
     });
 
     chrome.tabs.create({ url: 'popup.html' });
   }
+
+  // Run migration on install or update
+  migrateSettings();
 });
 
 // Update the extension icon based on the enabled/disabled state

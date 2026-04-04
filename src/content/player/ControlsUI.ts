@@ -1,4 +1,6 @@
 import type { VideoController, HlsQualityLevel, StreamStats } from './VideoCore';
+import { LAYOUT_PRESETS, PRESET_NAMES, applyLayoutPreset } from './LayoutPresets';
+import { THEME_PRESETS, THEME_PRESET_NAMES, ThemeManager, type ThemeConfig } from './ThemeManager';
 
 export function createCustomControls(
   videoContainer: HTMLElement,
@@ -12,41 +14,56 @@ export function createCustomControls(
   // === BOTTOM CONTROLS ===
   const controlsBar = document.createElement('div');
   controlsBar.className = 'controls-bar custom-ui';
+  controlsBar.setAttribute('role', 'toolbar');
+  controlsBar.setAttribute('aria-label', 'Player controls');
   controlsBar.innerHTML = `
     <div class="controls-section">
-      <button class="ctrl-btn play-btn" title="Play/Pause (Space)">
+      <button class="ctrl-btn play-btn" title="Play/Pause (Space)" tabindex="0" aria-label="Play or pause stream">
         <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
       </button>
       <div class="volume-container">
-        <button class="ctrl-btn mute-btn" title="Mute (M)">
+        <button class="ctrl-btn mute-btn" title="Mute (M)" tabindex="0" aria-label="Toggle mute">
           <svg class="vol-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
         </button>
-        <input type="range" class="volume-slider" min="0" max="100" value="${videoElement.volume * 100}">
+        <input type="range" class="volume-slider" min="0" max="100" value="${videoElement.volume * 100}" aria-label="Volume">
       </div>
-      <span class="live-indicator">LIVE</span>
+      <span class="live-indicator" aria-label="Stream is live">LIVE</span>
+      <span class="latency-display" title="Click to cycle latency mode" tabindex="0" role="button" aria-label="Stream latency - click to cycle mode"></span>
+      <span class="ad-shield-icon" title="Ad filter" aria-label="Ad filter status">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+      </span>
     </div>
     <div class="controls-section">
-      <button class="ctrl-btn clip-btn" title="Record Clip (30s)">
+      <button class="ctrl-btn clip-btn" title="Record Clip (30s)" tabindex="0" aria-label="Record a 30-second clip">
         <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
       </button>
-      <button class="ctrl-btn stats-btn" title="Stream Stats">
+      <button class="ctrl-btn stats-btn" title="Stream Stats" tabindex="0" aria-label="Toggle stream statistics overlay">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 5-5"/></svg>
       </button>
-      <button class="ctrl-btn audio-only-btn" title="Audio Only">
+      <button class="ctrl-btn audio-only-btn" title="Audio Only" tabindex="0" aria-label="Toggle audio-only mode">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
       </button>
-      <button class="ctrl-btn switch-default-btn" title="Return to Twitch Player">Default Player</button>
-      <button class="ctrl-btn chat-toggle-btn" title="Toggle Chat">
+      <button class="ctrl-btn switch-default-btn" title="Return to Twitch Player" tabindex="0" aria-label="Switch to default Twitch player">Default Player</button>
+      <button class="ctrl-btn chat-toggle-btn" title="Toggle Chat" tabindex="0" aria-label="Toggle chat sidebar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
       </button>
-      <button class="ctrl-btn settings-btn" title="Quality">Quality</button>
-      <button class="ctrl-btn pip-btn" title="Picture-in-Picture">
+      <button class="ctrl-btn theme-btn" title="Theme" tabindex="0" aria-label="Change player theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M12 2a10 10 0 0 0 0 20c.6 0 1-.4 1-1v-1.5c0-.4-.2-.8-.5-1-.3-.3-.5-.7-.5-1.2 0-.8.7-1.5 1.5-1.5H16a5.5 5.5 0 0 0 5.5-5.5A10 10 0 0 0 12 2z"/><circle cx="7.5" cy="11.5" r="1.5" fill="currentColor"/><circle cx="10.5" cy="7.5" r="1.5" fill="currentColor"/><circle cx="15.5" cy="7.5" r="1.5" fill="currentColor"/></svg>
+      </button>
+      <button class="ctrl-btn layout-btn" title="Layout Preset" tabindex="0" aria-label="Change layout preset">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </button>
+      <button class="ctrl-btn settings-btn" title="Quality" tabindex="0" aria-label="Change stream quality">Quality</button>
+      <button class="ctrl-btn popout-btn" title="Pop-Out Player" tabindex="0" aria-label="Open player in pop-out window">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </button>
+      <button class="ctrl-btn pip-btn" title="Picture-in-Picture" tabindex="0" aria-label="Toggle picture-in-picture mode">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="12" y="9" width="8" height="6" rx="1" fill="currentColor" opacity="0.4"/></svg>
       </button>
-      <button class="ctrl-btn theater-btn" title="Theater Mode (T)">
+      <button class="ctrl-btn theater-btn" title="Theater Mode (T)" tabindex="0" aria-label="Toggle theater mode">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 5v14h20V5H2zm18 12H4V7h16v10z"/></svg>
       </button>
-      <button class="ctrl-btn fullscreen-btn" title="Fullscreen (F)">
+      <button class="ctrl-btn fullscreen-btn" title="Fullscreen (F)" tabindex="0" aria-label="Toggle fullscreen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
       </button>
     </div>
@@ -86,11 +103,17 @@ export function createCustomControls(
     qualityOptionsHtml += `<div class="quality-option ${currentQuality === 'audio_only' ? 'selected' : ''}" data-quality="audio_only" data-level="-1">Audio Only</div>`;
 
     settingsModal.innerHTML = `
+      <button class="panel-close-btn settings-close-btn" aria-label="Close quality menu">&times;</button>
       <div class="settings-group">
         <span class="settings-label">Quality</span>
         <div class="quality-list">${qualityOptionsHtml}</div>
       </div>
     `;
+
+    settingsModal.querySelector('.settings-close-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      settingsModal.classList.remove('active');
+    });
 
     // Attach listeners
     settingsModal.querySelectorAll('.quality-option').forEach((opt) => {
@@ -125,6 +148,83 @@ export function createCustomControls(
 
   updateSettingsUI();
 
+  // === LAYOUT PRESET DROPDOWN ===
+  const layoutDropdown = document.createElement('div');
+  layoutDropdown.className = 'layout-dropdown';
+  let currentLayout = 'balanced';
+
+  const updateLayoutDropdown = () => {
+    layoutDropdown.innerHTML = `<button class="panel-close-btn layout-close-btn" aria-label="Close layout menu">&times;</button>` +
+    PRESET_NAMES.map((name) => {
+      const preset = LAYOUT_PRESETS[name];
+      return `<div class="layout-option ${name === currentLayout ? 'selected' : ''}" data-layout="${name}">${preset.label}</div>`;
+    }).join('');
+
+    layoutDropdown.querySelector('.layout-close-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      layoutDropdown.classList.remove('active');
+    });
+
+    layoutDropdown.querySelectorAll('.layout-option').forEach((opt) => {
+      opt.addEventListener('click', () => {
+        const name = opt.getAttribute('data-layout') || 'balanced';
+        currentLayout = name;
+        const host = videoContainer.closest('#kreo-twitch-player-host') as HTMLElement;
+        if (host) applyLayoutPreset(host, chatContainer, name);
+        updateLayoutDropdown();
+        layoutDropdown.classList.remove('active');
+      });
+    });
+  };
+
+  chrome.storage.sync.get(['layout'], (data) => {
+    currentLayout = data.layout || 'balanced';
+    updateLayoutDropdown();
+    // Apply on load
+    const host = videoContainer.closest('#kreo-twitch-player-host') as HTMLElement;
+    if (host) applyLayoutPreset(host, chatContainer, currentLayout);
+  });
+
+  // === THEME PICKER DROPDOWN ===
+  const themeDropdown = document.createElement('div');
+  themeDropdown.className = 'theme-dropdown';
+  let currentThemePreset = 'twitch-dark';
+
+  const updateThemeDropdown = () => {
+    themeDropdown.innerHTML = `<button class="panel-close-btn theme-close-btn" aria-label="Close theme menu">&times;</button>` +
+    THEME_PRESET_NAMES.map((name) => {
+      const preset = THEME_PRESETS[name];
+      return `<div class="theme-option ${name === currentThemePreset ? 'selected' : ''}" data-theme="${name}">${preset.label}</div>`;
+    }).join('');
+
+    themeDropdown.querySelector('.theme-close-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      themeDropdown.classList.remove('active');
+    });
+
+    themeDropdown.querySelectorAll('.theme-option').forEach((opt) => {
+      opt.addEventListener('click', () => {
+        const name = opt.getAttribute('data-theme') || 'twitch-dark';
+        currentThemePreset = name;
+        const config: ThemeConfig = { preset: name, custom: {} };
+        ThemeManager.saveTheme(config);
+        const host = videoContainer.closest('#kreo-twitch-player-host') as HTMLElement;
+        if (host) {
+          const tm = new ThemeManager(host);
+          tm.applyTheme(config);
+        }
+        updateThemeDropdown();
+        themeDropdown.classList.remove('active');
+      });
+    });
+  };
+
+  chrome.storage.sync.get(['theme'], (data) => {
+    const themeConfig: ThemeConfig = data.theme || { preset: 'twitch-dark', custom: {} };
+    currentThemePreset = themeConfig.preset || 'twitch-dark';
+    updateThemeDropdown();
+  });
+
   // === STATS OVERLAY ===
   const statsOverlay = document.createElement('div');
   statsOverlay.className = 'stats-overlay';
@@ -145,9 +245,151 @@ export function createCustomControls(
 
   videoController.onStats(updateStatsDisplay);
 
+  // === LATENCY DISPLAY ===
+  const latencyDisplay = controlsBar.querySelector('.latency-display') as HTMLElement;
+  const LATENCY_MODES = ['ultra-low', 'balanced', 'stable'] as const;
+  const LATENCY_MODE_LABELS: Record<string, string> = {
+    'ultra-low': 'Ultra Low',
+    'balanced': 'Balanced',
+    'stable': 'Stable',
+  };
+  let currentLatencyMode = 'balanced';
+
+  // Load current latency mode
+  chrome.storage.sync.get(['latencyMode', 'lowLatency'], (data) => {
+    if (data.latencyMode) {
+      currentLatencyMode = data.latencyMode;
+    } else {
+      currentLatencyMode = data.lowLatency !== false ? 'balanced' : 'stable';
+    }
+  });
+
+  const updateLatencyDisplay = (stats: StreamStats) => {
+    const latency = stats.latency;
+    let color = '#10b981'; // green
+    if (latency >= 5) color = '#ef4444'; // red
+    else if (latency >= 2) color = '#f59e0b'; // yellow
+
+    latencyDisplay.style.color = color;
+    latencyDisplay.textContent = latency > 0 ? `${latency.toFixed(1)}s` : '';
+    latencyDisplay.title = `Latency: ${latency.toFixed(1)}s — Mode: ${LATENCY_MODE_LABELS[currentLatencyMode] || currentLatencyMode}\nClick to cycle`;
+  };
+
+  videoController.onStats(updateLatencyDisplay);
+
+  latencyDisplay.addEventListener('click', () => {
+    const currentIdx = LATENCY_MODES.indexOf(currentLatencyMode as any);
+    const nextIdx = (currentIdx + 1) % LATENCY_MODES.length;
+    currentLatencyMode = LATENCY_MODES[nextIdx];
+    videoController.setLatencyMode(currentLatencyMode);
+  });
+
+  // === AD SHIELD INDICATOR ===
+  const adShieldIcon = controlsBar.querySelector('.ad-shield-icon') as HTMLElement;
+  let adBlockCount = 0;
+
+  const adBlockedHandler = () => {
+    adBlockCount++;
+    adShieldIcon.title = `Ad filter: ${adBlockCount} ad${adBlockCount > 1 ? 's' : ''} filtered`;
+
+    // Pulse animation + active color
+    adShieldIcon.classList.remove('pulse');
+    adShieldIcon.classList.add('ad-shield-active');
+    void adShieldIcon.offsetWidth; // force reflow
+    adShieldIcon.classList.add('pulse');
+
+    setTimeout(() => adShieldIcon.classList.remove('ad-shield-active'), 2000);
+
+    // Show toast
+    videoElement.dispatchEvent(new CustomEvent('twitch-show-toast', {
+      detail: { message: `Ad segment filtered (${adBlockCount} total)`, type: 'success' },
+    }));
+  };
+
+  videoElement.addEventListener('twitch-ad-blocked', adBlockedHandler);
+
+  // Listen for channel points claimed
+  const pointsClaimedHandler = () => {
+    videoElement.dispatchEvent(new CustomEvent('twitch-show-toast', {
+      detail: { message: 'Channel points claimed!', type: 'success' },
+    }));
+  };
+  document.addEventListener('twitch-points-claimed', pointsClaimedHandler);
+
+  // === ARIA-LIVE ANNOUNCER ===
+  const ariaAnnouncer = document.createElement('div');
+  ariaAnnouncer.className = 'sr-only';
+  ariaAnnouncer.setAttribute('role', 'status');
+  ariaAnnouncer.setAttribute('aria-live', 'assertive');
+  ariaAnnouncer.setAttribute('aria-atomic', 'true');
+
+  const announce = (msg: string) => {
+    ariaAnnouncer.textContent = '';
+    // Force reflow so screen reader picks up the change
+    requestAnimationFrame(() => { ariaAnnouncer.textContent = msg; });
+  };
+
+  // Announce play/pause state changes
+  videoElement.addEventListener('play', () => announce('Stream playing'));
+  videoElement.addEventListener('pause', () => announce('Stream paused'));
+
+  // === CLOSED CAPTIONS TOGGLE ===
+  const ccBtn = document.createElement('button');
+  ccBtn.className = 'ctrl-btn cc-btn';
+  ccBtn.title = 'Closed Captions';
+  ccBtn.tabIndex = 0;
+  ccBtn.setAttribute('aria-label', 'Toggle closed captions');
+  ccBtn.style.display = 'none'; // Hidden until CC track found
+  ccBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 12h2m6 0h2M7 8h4m6 0h-4"/></svg>`;
+
+  let ccEnabled = false;
+  const hlsInstance = videoController.getHlsInstance();
+
+  // Check for subtitle tracks when HLS manifest is parsed
+  const checkCCTracks = () => {
+    const hls = videoController.getHlsInstance();
+    if (hls && hls.subtitleTracks && hls.subtitleTracks.length > 0) {
+      ccBtn.style.display = 'flex';
+    }
+  };
+
+  // Check periodically (HLS may load subtitle tracks after initial manifest)
+  const ccCheckInterval = window.setInterval(() => {
+    checkCCTracks();
+    const hls = videoController.getHlsInstance();
+    if (hls && hls.subtitleTracks && hls.subtitleTracks.length > 0) {
+      window.clearInterval(ccCheckInterval);
+    }
+  }, 3000);
+
+  ccBtn.addEventListener('click', () => {
+    const hls = videoController.getHlsInstance();
+    if (!hls) return;
+    ccEnabled = !ccEnabled;
+    if (ccEnabled && hls.subtitleTracks.length > 0) {
+      hls.subtitleTrack = 0;
+      hls.subtitleDisplay = true;
+    } else {
+      hls.subtitleTrack = -1;
+      hls.subtitleDisplay = false;
+    }
+    ccBtn.classList.toggle('active-toggle', ccEnabled);
+    announce(ccEnabled ? 'Closed captions enabled' : 'Closed captions disabled');
+  });
+
+  // Insert CC button before fullscreen
+  const fullscreenBtnEl = controlsBar.querySelector('.fullscreen-btn');
+  const rightSectionEl = controlsBar.querySelector('.controls-section:last-child');
+  if (rightSectionEl && fullscreenBtnEl) {
+    rightSectionEl.insertBefore(ccBtn, fullscreenBtnEl);
+  }
+
   videoContainer.appendChild(controlsBar);
   videoContainer.appendChild(settingsModal);
+  videoContainer.appendChild(layoutDropdown);
+  videoContainer.appendChild(themeDropdown);
   videoContainer.appendChild(statsOverlay);
+  videoContainer.appendChild(ariaAnnouncer);
 
   // === Auto-hide UI ===
   let hideTimeout: number;
@@ -177,6 +419,9 @@ export function createCustomControls(
   const clipBtn = controlsBar.querySelector('.clip-btn') as HTMLButtonElement;
   const statsBtn = controlsBar.querySelector('.stats-btn') as HTMLButtonElement;
   const audioOnlyBtn = controlsBar.querySelector('.audio-only-btn') as HTMLButtonElement;
+  const popoutBtn = controlsBar.querySelector('.popout-btn') as HTMLButtonElement;
+  const layoutBtn = controlsBar.querySelector('.layout-btn') as HTMLButtonElement;
+  const themeBtn = controlsBar.querySelector('.theme-btn') as HTMLButtonElement;
 
   // === Switch to default player ===
   switchDefaultBtn.addEventListener('click', () => {
@@ -251,9 +496,11 @@ export function createCustomControls(
   });
 
   // === Fullscreen ===
+  // Use the top-level host so both video AND chat are inside the fullscreen element
+  const fullscreenTarget = videoContainer.closest('#kreo-twitch-player-host') || videoContainer;
   fullscreenBtn.addEventListener('click', () => {
     if (!document.fullscreenElement) {
-      videoContainer.requestFullscreen().catch(() => {});
+      fullscreenTarget.requestFullscreen().catch(() => {});
     } else {
       document.exitFullscreen();
     }
@@ -263,11 +510,19 @@ export function createCustomControls(
   settingsBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     settingsModal.classList.toggle('active');
+    layoutDropdown.classList.remove('active');
+    themeDropdown.classList.remove('active');
   });
 
   const closeSettingsHandler = (e: MouseEvent) => {
     if (!settingsModal.contains(e.target as Node) && !settingsBtn.contains(e.target as Node)) {
       settingsModal.classList.remove('active');
+    }
+    if (!layoutDropdown.contains(e.target as Node) && !layoutBtn.contains(e.target as Node)) {
+      layoutDropdown.classList.remove('active');
+    }
+    if (!themeDropdown.contains(e.target as Node) && !themeBtn.contains(e.target as Node)) {
+      themeDropdown.classList.remove('active');
     }
   };
   document.addEventListener('click', closeSettingsHandler);
@@ -283,6 +538,27 @@ export function createCustomControls(
     } catch (e: any) {
       console.error('[Alt Player] PiP failed:', e?.message || String(e));
     }
+  });
+
+  // === Layout Preset Toggle ===
+  layoutBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    layoutDropdown.classList.toggle('active');
+    settingsModal.classList.remove('active');
+    themeDropdown.classList.remove('active');
+  });
+
+  // === Theme Picker Toggle ===
+  themeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    themeDropdown.classList.toggle('active');
+    settingsModal.classList.remove('active');
+    layoutDropdown.classList.remove('active');
+  });
+
+  // === Pop-Out Player ===
+  popoutBtn.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ action: 'OPEN_POPOUT', channel: streamerName });
   });
 
   // === Theater Mode ===
@@ -375,6 +651,41 @@ export function createCustomControls(
   });
   updateAudioOnlyBtn();
 
+  // === Chat/Video Layout Cycling ===
+  type LayoutMode = 'both' | 'video-only' | 'chat-only';
+  const LAYOUT_CYCLE: LayoutMode[] = ['both', 'video-only', 'chat-only'];
+  let layoutModeIdx = 0;
+
+  const setLayoutMode = (mode: LayoutMode) => {
+    const host = videoContainer.closest('#kreo-twitch-player-host') as HTMLElement;
+    if (!host) return;
+
+    host.classList.remove('layout-video-only', 'layout-chat-only');
+
+    if (mode === 'video-only') {
+      host.classList.add('layout-video-only');
+    } else if (mode === 'chat-only') {
+      host.classList.add('layout-chat-only');
+      // In chat-only mode, show stream info in chat header
+      const chatHeader = chatContainer.querySelector('.irc-chat-header');
+      if (chatHeader && !chatHeader.querySelector('.chat-only-info')) {
+        const info = document.createElement('span');
+        info.className = 'chat-only-info';
+        info.innerHTML = `<span class="live-indicator" style="margin-left:8px">LIVE</span>`;
+        chatHeader.appendChild(info);
+      }
+    } else {
+      // Remove chat-only info when returning to normal mode
+      const chatOnlyInfo = chatContainer.querySelector('.chat-only-info');
+      chatOnlyInfo?.remove();
+    }
+  };
+
+  const cycleLayoutMode = () => {
+    layoutModeIdx = (layoutModeIdx + 1) % LAYOUT_CYCLE.length;
+    setLayoutMode(LAYOUT_CYCLE[layoutModeIdx]);
+  };
+
   // === Keyboard Shortcuts ===
   const keydownHandler = (e: KeyboardEvent) => {
     const target = e.target as HTMLElement;
@@ -428,6 +739,11 @@ export function createCustomControls(
         e.preventDefault();
         videoElement.currentTime += 10;
         break;
+      case 'KeyC':
+        // Cycle: Video+Chat → Video-Only → Chat-Only
+        e.preventDefault();
+        cycleLayoutMode();
+        break;
     }
   };
   window.addEventListener('keydown', keydownHandler);
@@ -437,6 +753,10 @@ export function createCustomControls(
       window.removeEventListener('keydown', keydownHandler);
       document.removeEventListener('click', closeSettingsHandler);
       videoContainer.removeEventListener('wheel', wheelHandler);
+      videoElement.removeEventListener('twitch-ad-blocked', adBlockedHandler);
+      document.removeEventListener('twitch-points-claimed', pointsClaimedHandler);
+      window.clearInterval(ccCheckInterval);
     },
+    controlsBar,
   };
 }

@@ -1,13 +1,15 @@
 /* Basic Minimalist Theme */
-:root {
+#kreo-twitch-player-host {
   --player-bg: #000;
-  --ui-bg: rgba(0, 0, 0, 0.7);
+  --ui-opacity: 0.7;
+  --ui-bg: rgb(0 0 0 / var(--ui-opacity));
   --accent-color: #9146FF;
   --text-primary: #fff;
   --text-secondary: #adadb8;
-}
+  --chat-bg: #18181b;
+  --chat-font-size: 13px;
+  --chat-spacing: 3px;
 
-#kreo-twitch-player-host {
   position: absolute;
   top: 0;
   left: 0;
@@ -39,7 +41,7 @@
   position: relative;
   width: 340px;
   height: 100%;
-  background: #18181b;
+  background: var(--chat-bg);
   border-left: 1px solid #2d2d30;
   z-index: 20;
   display: flex;
@@ -151,6 +153,23 @@ video {
   border-radius: 4px;
 }
 
+/* Latency display */
+.latency-display {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Consolas', 'Monaco', monospace;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: background 0.15s;
+  min-width: 28px;
+  text-align: center;
+}
+
+.latency-display:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 /* Clip recording indicator */
 .clip-btn.recording {
   color: #ef4444;
@@ -215,12 +234,38 @@ video {
   }
 }
 
+/* Panel close button (shared) */
+.panel-close-btn {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  transition: background 0.15s;
+  z-index: 10;
+}
+
+.panel-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 /* Settings Menu */
 .settings-modal {
   position: absolute;
   bottom: 60px;
   right: 16px;
   background: rgba(15, 15, 18, 0.95);
+  /* relative for panel-close-btn positioning within */
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 8px 0;
@@ -277,6 +322,145 @@ video {
 .quality-option.selected::after {
   content: '\25CF';
   font-size: 8px;
+}
+
+/* Layout Dropdown */
+.layout-dropdown {
+  position: absolute;
+  bottom: 60px;
+  right: 120px;
+  background: rgba(15, 15, 18, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 0;
+  border-radius: 8px;
+  font-size: 13px;
+  width: 160px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  transform: translateY(10px);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 100;
+}
+
+.layout-dropdown.active {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+}
+
+.layout-option {
+  padding: 8px 16px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.2s;
+  color: #efeff1;
+}
+
+.layout-option:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.layout-option.selected {
+  color: var(--accent-color);
+  background: rgba(145, 70, 255, 0.1);
+}
+
+.layout-option.selected::after {
+  content: '\25CF';
+  font-size: 8px;
+}
+
+/* Theme Dropdown */
+.theme-dropdown {
+  position: absolute;
+  bottom: 60px;
+  right: 180px;
+  background: rgba(15, 15, 18, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 0;
+  border-radius: 8px;
+  font-size: 13px;
+  width: 160px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  transform: translateY(10px);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 100;
+}
+
+.theme-dropdown.active {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+}
+
+.theme-option {
+  padding: 8px 16px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.2s;
+  color: #efeff1;
+}
+
+.theme-option:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.theme-option.selected {
+  color: var(--accent-color);
+  background: rgba(145, 70, 255, 0.1);
+}
+
+.theme-option.selected::after {
+  content: '\25CF';
+  font-size: 8px;
+}
+
+/* Layout Preset Styles */
+#kreo-twitch-player-host.layout-minimalist .chat-container {
+  display: none !important;
+}
+
+#kreo-twitch-player-host.layout-chat-focused .chat-container {
+  width: 480px;
+}
+
+#kreo-twitch-player-host.layout-theater .chat-container {
+  display: none !important;
+}
+
+/* Video-Only Mode */
+#kreo-twitch-player-host.layout-video-only .chat-container {
+  display: none !important;
+}
+
+#kreo-twitch-player-host.layout-video-only .video-container {
+  flex: 1;
+}
+
+/* Chat-Only Mode */
+#kreo-twitch-player-host.layout-chat-only .video-container {
+  display: none !important;
+}
+
+#kreo-twitch-player-host.layout-chat-only .chat-container {
+  width: 100% !important;
+  flex: 1;
+  display: flex !important;
+}
+
+.chat-only-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* Stats Overlay */
@@ -361,11 +545,39 @@ video {
 }
 
 .irc-chat-msg {
-  padding: 3px 0;
+  padding: var(--chat-spacing) 4px;
   line-height: 1.4;
-  font-size: 13px;
+  font-size: var(--chat-font-size);
   word-wrap: break-word;
   overflow-wrap: break-word;
+  border-left: 2px solid transparent;
+  border-radius: 2px;
+}
+
+/* Mention highlighting */
+.irc-chat-msg-mention {
+  background: rgba(218, 165, 32, 0.15);
+  border-left-color: #daa520;
+}
+
+/* Broadcaster message */
+.irc-chat-msg-broadcaster {
+  background: rgba(233, 25, 22, 0.08);
+  border-left-color: #e91916;
+}
+
+/* Moderator message */
+.irc-chat-msg-moderator {
+  background: rgba(0, 173, 3, 0.08);
+  border-left-color: #00ad03;
+}
+
+/* Inline mention highlight */
+.irc-mention-highlight {
+  background: rgba(218, 165, 32, 0.3);
+  border-radius: 2px;
+  padding: 0 2px;
+  font-weight: 600;
 }
 
 .irc-chat-username {
@@ -445,8 +657,8 @@ video {
   right: 24px !important;
   top: auto !important;
   left: auto !important;
-  width: 384px !important;
-  height: 216px !important;
+  width: var(--mini-w, 384px) !important;
+  height: var(--mini-h, 216px) !important;
   z-index: 10000 !important;
   border-radius: 12px;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
@@ -454,6 +666,14 @@ video {
   overflow: hidden;
   animation: mini-slide-in 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   transform-origin: bottom right;
+}
+
+/* When dragged, use absolute positioning instead of anchored bottom-right */
+#kreo-twitch-player-host.mini-mode.mini-dragged {
+  bottom: auto !important;
+  right: auto !important;
+  top: var(--mini-y, auto) !important;
+  left: var(--mini-x, auto) !important;
 }
 
 #kreo-twitch-player-host.mini-mode .chat-container {
@@ -468,11 +688,13 @@ video {
 #kreo-twitch-player-host.mini-mode .settings-btn,
 #kreo-twitch-player-host.mini-mode .chat-toggle-btn,
 #kreo-twitch-player-host.mini-mode .pip-btn,
+#kreo-twitch-player-host.mini-mode .popout-btn,
 #kreo-twitch-player-host.mini-mode .theater-btn,
 #kreo-twitch-player-host.mini-mode .clip-btn,
 #kreo-twitch-player-host.mini-mode .stats-btn,
 #kreo-twitch-player-host.mini-mode .audio-only-btn,
-#kreo-twitch-player-host.mini-mode .switch-default-btn {
+#kreo-twitch-player-host.mini-mode .switch-default-btn,
+#kreo-twitch-player-host.mini-mode .layout-btn {
   display: none !important;
 }
 
@@ -520,6 +742,79 @@ video {
   opacity: 1;
 }
 
+/* Mini-player drag bar */
+.mini-drag-bar {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  cursor: grab;
+  z-index: 10002;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), transparent);
+}
+
+.mini-drag-bar:active {
+  cursor: grabbing;
+}
+
+#kreo-twitch-player-host.mini-mode .mini-drag-bar {
+  display: block;
+}
+
+/* Mini-player resize handle */
+.mini-resize-handle {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nw-resize;
+  z-index: 10002;
+}
+
+.mini-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 8px;
+  height: 8px;
+  border-top: 2px solid rgba(255, 255, 255, 0.4);
+  border-left: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+#kreo-twitch-player-host.mini-mode .mini-resize-handle {
+  display: block;
+}
+
+#kreo-twitch-player-host.mini-mode:hover .mini-resize-handle::after {
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+/* Fullscreen: host is the fullscreen element so chat sidebar is included */
+#kreo-twitch-player-host:fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  display: flex;
+}
+
+#kreo-twitch-player-host:fullscreen .video-container {
+  flex: 1;
+  min-width: 0;
+}
+
+#kreo-twitch-player-host:fullscreen .chat-container {
+  width: 340px;
+  flex-shrink: 0;
+}
+
+#kreo-twitch-player-host:fullscreen .chat-container.hidden {
+  display: none;
+}
+
 /* Theater mode fallback (when native Twitch button not found) */
 #kreo-twitch-player-host.theater-mode {
   position: fixed !important;
@@ -528,4 +823,993 @@ video {
   width: 100vw !important;
   height: 100vh !important;
   z-index: 9999 !important;
+}
+
+/* ── Toast Notifications ── */
+.toast-container {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transform: translateX(120%);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: auto;
+  max-width: 280px;
+}
+
+.toast-visible {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.toast-exit {
+  transform: translateX(120%);
+  opacity: 0;
+}
+
+.toast-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  line-height: 1.3;
+}
+
+.toast-info {
+  background: rgba(59, 130, 246, 0.9);
+  border: 1px solid rgba(59, 130, 246, 0.5);
+}
+
+.toast-success {
+  background: rgba(16, 185, 129, 0.9);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+}
+
+.toast-warning {
+  background: rgba(245, 158, 11, 0.9);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+}
+
+.toast-error {
+  background: rgba(239, 68, 68, 0.9);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+/* ── Ad Shield Icon ── */
+.ad-shield-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--accent-color);
+  opacity: 0.5;
+  transition: opacity 0.3s;
+  cursor: default;
+  margin-left: 2px;
+}
+
+.ad-shield-icon.ad-shield-active {
+  color: #10b981;
+  opacity: 1;
+}
+
+.ad-shield-icon.pulse {
+  opacity: 1;
+  animation: shield-pulse 0.5s ease-out;
+}
+
+@keyframes shield-pulse {
+  0% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+/* Theme: Light */
+#kreo-twitch-player-host.theme-light {
+  --text-primary: #0e0e10;
+  --text-secondary: #53535f;
+  --chat-bg: #f7f7f8;
+}
+
+#kreo-twitch-player-host.theme-light .chat-container {
+  border-left-color: #e5e5e5;
+}
+
+#kreo-twitch-player-host.theme-light .irc-chat-text {
+  color: #0e0e10;
+}
+
+#kreo-twitch-player-host.theme-light .irc-chat-system {
+  color: #53535f;
+}
+
+#kreo-twitch-player-host.theme-light .irc-chat-header {
+  border-bottom-color: #e0e0e0;
+}
+
+#kreo-twitch-player-host.theme-light .irc-chat-input-area {
+  border-top-color: #e0e0e0;
+}
+
+#kreo-twitch-player-host.theme-light .irc-chat-title {
+  color: #0e0e10;
+}
+
+#kreo-twitch-player-host.theme-light .settings-modal {
+  background: rgba(247, 247, 248, 0.95);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+#kreo-twitch-player-host.theme-light .quality-option {
+  color: #0e0e10;
+}
+
+#kreo-twitch-player-host.theme-light .quality-option:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Theme: High Contrast */
+#kreo-twitch-player-host.theme-high-contrast .irc-chat-text {
+  color: #fff;
+  font-weight: 500;
+}
+
+#kreo-twitch-player-host.theme-high-contrast .irc-chat-username {
+  font-weight: 700;
+}
+
+#kreo-twitch-player-host.theme-high-contrast .controls-bar {
+  background: rgba(0, 0, 0, 1) !important;
+}
+
+/* Reload button in error messages */
+.error-reload-btn {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 16px;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.error-reload-btn:hover {
+  background: #a970ff;
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 3: Accessibility
+   ═══════════════════════════════════════════ */
+
+/* Visible focus indicators */
+.ctrl-btn:focus-visible,
+button:focus-visible,
+input:focus-visible,
+[tabindex="0"]:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* Screen-reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High Contrast theme enhancements */
+#kreo-twitch-player-host.theme-high-contrast {
+  --accent-color: #FFD700;
+  --text-primary: #ffffff;
+  --text-secondary: #e0e0e0;
+}
+
+#kreo-twitch-player-host.theme-high-contrast .chat-container {
+  border-left: 2px solid #FFD700;
+}
+
+#kreo-twitch-player-host.theme-high-contrast .ctrl-btn {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+#kreo-twitch-player-host.theme-high-contrast .ctrl-btn:hover,
+#kreo-twitch-player-host.theme-high-contrast .ctrl-btn:focus-visible {
+  border-color: #FFD700;
+  background: rgba(255, 215, 0, 0.15);
+}
+
+#kreo-twitch-player-host.theme-high-contrast .irc-chat-msg {
+  border-left-width: 3px;
+}
+
+#kreo-twitch-player-host.theme-high-contrast .irc-chat-header,
+#kreo-twitch-player-host.theme-high-contrast .irc-chat-input-area {
+  border-color: #fff !important;
+}
+
+/* CC button */
+.cc-btn.active-toggle {
+  color: var(--accent-color);
+  background: rgba(145, 70, 255, 0.15);
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 3: Predictions/Polls/Drops Panel
+   ═══════════════════════════════════════════ */
+
+.features-btn {
+  position: relative;
+}
+
+.features-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  line-height: 1;
+}
+
+.features-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 100%;
+  background: rgba(15, 15, 18, 0.95);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 13px;
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+.features-panel.active {
+  transform: translateX(0);
+}
+
+.features-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.features-panel-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.features-panel-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.features-panel-close:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.features-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+}
+
+.features-section {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.features-section:last-child {
+  border-bottom: none;
+}
+
+.features-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--accent-color);
+  margin-bottom: 4px;
+}
+
+.features-section-subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.features-outcome {
+  margin-bottom: 8px;
+}
+
+.features-outcome-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 3px;
+}
+
+.features-outcome-title {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.features-outcome-pct {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.features-progress-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.features-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.features-outcome-stats {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.features-total {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  text-align: right;
+}
+
+.features-empty {
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-align: center;
+  padding: 24px 0;
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 3: Multi-Stream Grid
+   ═══════════════════════════════════════════ */
+
+/* When multi-stream is active, convert host to a grid */
+#kreo-twitch-player-host.multi-stream-active {
+  display: grid;
+}
+
+/* Grid layouts based on stream count */
+#kreo-twitch-player-host[data-stream-count="2"] {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
+}
+
+#kreo-twitch-player-host[data-stream-count="2"] .chat-container {
+  display: none !important;
+}
+
+#kreo-twitch-player-host[data-stream-count="3"] {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+#kreo-twitch-player-host[data-stream-count="3"] .video-container {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+#kreo-twitch-player-host[data-stream-count="3"] .chat-container {
+  display: none !important;
+}
+
+#kreo-twitch-player-host[data-stream-count="4"] {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+#kreo-twitch-player-host[data-stream-count="4"] .chat-container {
+  display: none !important;
+}
+
+.multi-stream-grid {
+  display: contents;
+}
+
+.multi-stream-cell {
+  position: relative;
+  background: #000;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.multi-stream-cell video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.multi-stream-cell.audio-focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
+.multi-stream-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 6px 10px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.multi-stream-cell:hover .multi-stream-overlay {
+  opacity: 1;
+}
+
+.multi-stream-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  flex: 1;
+}
+
+.multi-stream-volume {
+  width: 50px;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  outline: none;
+}
+
+.multi-stream-volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+}
+
+.multi-stream-playpause {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background 0.15s;
+}
+
+.multi-stream-playpause:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.multi-stream-close {
+  background: rgba(239, 68, 68, 0.8);
+  border: none;
+  color: #fff;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.multi-stream-close:hover {
+  background: #ef4444;
+}
+
+.multi-stream-dialog {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(15, 15, 18, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 32px 16px 16px;
+  z-index: 200;
+  display: flex;
+  gap: 8px;
+}
+
+.multi-stream-dialog .panel-close-btn {
+  top: 4px;
+  right: 4px;
+}
+
+.multi-stream-input {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #fff;
+  padding: 6px 10px;
+  font-size: 13px;
+  outline: none;
+  width: 160px;
+}
+
+.multi-stream-input:focus {
+  border-color: var(--accent-color);
+}
+
+.multi-stream-go-btn {
+  background: var(--accent-color);
+  border: none;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.multi-stream-go-btn:hover {
+  background: #a970ff;
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 3: Mod Tools Panel
+   ═══════════════════════════════════════════ */
+
+.mod-auth-indicator {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #666;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.mod-auth-indicator.authenticated {
+  background: #10b981;
+}
+
+.mod-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 280px;
+  height: 100%;
+  background: rgba(15, 15, 18, 0.95);
+  backdrop-filter: blur(8px);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 160;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 13px;
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+.mod-panel.active {
+  transform: translateX(0);
+}
+
+.mod-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.mod-panel-title {
+  font-weight: 600;
+  font-size: 14px;
+  flex: 1;
+}
+
+.mod-mode-indicator {
+  font-size: 9px;
+  font-weight: 700;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+}
+
+.mod-panel-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.mod-panel-close:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mod-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.mod-panel-info {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.mod-connect-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background: var(--accent-color);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mod-connect-btn:hover {
+  background: #a970ff;
+}
+
+.mod-user-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.mod-disconnect-btn {
+  background: none;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #ef4444;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.mod-disconnect-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.mod-section {
+  padding: 8px 0;
+}
+
+.mod-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.mod-timeout-buttons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.mod-action-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.mod-action-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.mod-ban-btn {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.mod-ban-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.mod-toggles {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.mod-toggle-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mod-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mod-toggle-btn.active {
+  background: rgba(145, 70, 255, 0.15);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.mod-chat-input-wrapper {
+  display: flex;
+  gap: 6px;
+}
+
+.mod-chat-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: #fff;
+  padding: 6px 8px;
+  font-size: 12px;
+  outline: none;
+}
+
+.mod-chat-input:focus {
+  border-color: var(--accent-color);
+}
+
+.mod-chat-send {
+  background: var(--accent-color);
+  border: none;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mod-chat-send:hover {
+  background: #a970ff;
+}
+
+/* Inline chat input (replaces anonymous label when authenticated) */
+.mod-inline-chat {
+  display: flex;
+  gap: 6px;
+}
+
+.mod-inline-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: #fff;
+  padding: 6px 8px;
+  font-size: 12px;
+  outline: none;
+}
+
+.mod-inline-input:focus {
+  border-color: var(--accent-color);
+}
+
+.mod-inline-send {
+  background: var(--accent-color);
+  border: none;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.mod-inline-send:hover {
+  background: #a970ff;
+}
+
+/* Mod setup instructions */
+.mod-setup-steps {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 8px 0 12px;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+
+.mod-setup-steps li {
+  margin-bottom: 6px;
+}
+
+.mod-redirect-url {
+  display: block;
+  margin-top: 4px;
+  padding: 4px 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  font-size: 10px;
+  word-break: break-all;
+  color: var(--text-primary);
+  user-select: all;
+}
+
+.mod-setup-input-wrapper {
+  display: flex;
+  gap: 6px;
+}
+
+.mod-setup-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: #fff;
+  padding: 6px 8px;
+  font-size: 12px;
+  outline: none;
+}
+
+.mod-setup-input:focus {
+  border-color: var(--accent-color);
+}
+
+.mod-setup-save {
+  background: var(--accent-color);
+  border: none;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.mod-setup-save:hover {
+  background: #a970ff;
+}
+
+/* Context menu for right-click on username */
+.mod-context-menu {
+  position: fixed;
+  background: rgba(15, 15, 18, 0.98);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 4px 0;
+  min-width: 140px;
+  z-index: 100000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.mod-context-header {
+  padding: 6px 12px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--accent-color);
+}
+
+.mod-context-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.mod-context-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mod-context-ban {
+  color: #ef4444;
+}
+
+.mod-context-ban:hover {
+  background: rgba(239, 68, 68, 0.1);
 }

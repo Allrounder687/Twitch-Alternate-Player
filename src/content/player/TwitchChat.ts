@@ -1,6 +1,7 @@
 /**
  * Twitch IRC Chat Client — connects via WebSocket as anonymous viewer (justinfan).
- * Parses IRC messages, renders usernames with colors, supports BTTV/FFZ emotes.
+ * Parses IRC messages, renders usernames with colors, supports BTTV/FFZ/7TV emotes.
+ * Supports mention highlighting and broadcaster/mod message styling.
  */
 
 import { EmoteManager } from './EmoteManager';
@@ -33,6 +34,7 @@ export class TwitchChat {
   private destroyed = false;
   private messageCount = 0;
   private maxMessages = 200;
+  private twitchUsername = '';
 
   constructor(channel: string, container: HTMLElement) {
     this.channel = channel.toLowerCase();
@@ -62,11 +64,48 @@ export class TwitchChat {
   }
 
   async connect(): Promise<void> {
+    // Load username for mention highlighting
+    try {
+      const data = await new Promise<Record<string, any>>((resolve) => {
+        chrome.storage.sync.get(['twitchUsername'], (d) => resolve(d));
+      });
+      this.twitchUsername = (data.twitchUsername || '').toLowerCase();
+    } catch {
+      // Ignore
+    }
+
+    // Try auto-detecting username from the page if not set
+    if (!this.twitchUsername) {
+      this.twitchUsername = this.detectUsernameFromPage();
+    }
+
     // Load emotes first
     await this.emoteManager.loadGlobalEmotes();
     this.emoteManager.loadChannelEmotes(this.channel);
 
     this.initWebSocket();
+  }
+
+  private detectUsernameFromPage(): string {
+    try {
+      // Try to find username from Twitch's DOM
+      const userMenuBtn = document.querySelector('[data-a-target="user-menu-toggle"]');
+      if (userMenuBtn) {
+        const img = userMenuBtn.querySelector('img');
+        if (img?.alt) return img.alt.toLowerCase();
+      }
+      // Try from cookies
+      const cookies = document.cookie.split(';');
+      for (const cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'login' || name === 'name') {
+          return (value || '').toLowerCase();
+        }
+      }
+    } catch {
+      // Non-critical
+    }
+    return '';
   }
 
   private initWebSocket(): void {
@@ -199,6 +238,22 @@ export class TwitchChat {
     const el = document.createElement('div');
     el.className = 'irc-chat-msg';
 
+    // Check for broadcaster/moderator badges
+    const badgeNames = msg.badges.map((b) => b.split('/')[0]);
+    const isBroadcaster = badgeNames.includes('broadcaster');
+    const isModerator = badgeNames.includes('moderator');
+
+    if (isBroadcaster) {
+      el.classList.add('irc-chat-msg-broadcaster');
+    } else if (isModerator) {
+      el.classList.add('irc-chat-msg-moderator');
+    }
+
+    // Check if current user is mentioned
+    if (this.twitchUsername && this.isMentioned(msg.message)) {
+      el.classList.add('irc-chat-msg-mention');
+    }
+
     // Badges
     let badgeHtml = '';
     for (const badge of msg.badges) {
@@ -209,7 +264,7 @@ export class TwitchChat {
       else if (name === 'subscriber') badgeHtml += '<span class="irc-badge subscriber" title="Subscriber">&#9829;</span>';
     }
 
-    // Process message text — replace Twitch emotes and BTTV/FFZ emotes
+    // Process message text — replace Twitch emotes and BTTV/FFZ/7TV emotes
     const processedMessage = this.processMessageEmotes(msg);
 
     el.innerHTML = `
@@ -230,6 +285,13 @@ export class TwitchChat {
 
     // Auto-scroll to bottom
     this.messageList.scrollTop = this.messageList.scrollHeight;
+  }
+
+  private isMentioned(message: string): boolean {
+    if (!this.twitchUsername) return false;
+    const lower = message.toLowerCase();
+    // Check for @username pattern
+    return lower.includes(`@${this.twitchUsername}`);
   }
 
   private processMessageEmotes(msg: ChatMessage): string {
@@ -259,10 +321,20 @@ export class TwitchChat {
       text = this.escapeHtml(text);
     }
 
-    // Then apply BTTV/FFZ emotes (word-based replacement)
+    // Then apply BTTV/FFZ/7TV emotes (word-based replacement)
     text = this.emoteManager.replaceEmotesInHtml(text);
 
+    // Highlight @mentions in text
+    if (this.twitchUsername) {
+      const mentionRegex = new RegExp(`(@${this.escapeRegExp(this.twitchUsername)})`, 'gi');
+      text = text.replace(mentionRegex, '<span class="irc-mention-highlight">$1</span>');
+    }
+
     return text;
+  }
+
+  private escapeRegExp(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
   private addSystemMessage(text: string): void {

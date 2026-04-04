@@ -1,25 +1,66 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import { resetChannelSettings } from '../content/player/ChannelSettings';
+import { THEME_PRESETS, THEME_PRESET_NAMES, ThemeManager, type ThemeConfig } from '../content/player/ThemeManager';
+
+type LatencyMode = 'ultra-low' | 'balanced' | 'stable';
+
+interface EmoteProviders {
+  bttv: boolean;
+  ffz: boolean;
+  seventv: boolean;
+}
+
+const LATENCY_LABELS: Record<LatencyMode, string> = {
+  'ultra-low': 'Ultra Low',
+  'balanced': 'Balanced',
+  'stable': 'Stable',
+};
 
 const App: React.FC = () => {
   const [isEnabled, setIsEnabled] = useState<boolean>(false);
   const [streamerName, setStreamerName] = useState<string>('');
   const [volume, setVolume] = useState<number>(50);
   const [quality, setQuality] = useState<string>('auto');
-  const [lowLatency, setLowLatency] = useState<boolean>(true);
+  const [latencyMode, setLatencyMode] = useState<LatencyMode>('balanced');
   const [chatEnabled, setChatEnabled] = useState<boolean>(true);
+  const [emoteProviders, setEmoteProviders] = useState<EmoteProviders>({ bttv: true, ffz: true, seventv: true });
+  const [autoClaimPoints, setAutoClaimPoints] = useState<boolean>(true);
+  const [twitchUsername, setTwitchUsername] = useState<string>('');
+  const [showAdNotifications, setShowAdNotifications] = useState<boolean>(true);
+  const [layout, setLayout] = useState<string>('balanced');
+  const [themePreset, setThemePreset] = useState<string>('twitch-dark');
+  const [accentColor, setAccentColor] = useState<string>('#9146FF');
+  const [chatFontSize, setChatFontSize] = useState<number>(13);
+  const [chatSpacing, setChatSpacing] = useState<string>('normal');
 
   useEffect(() => {
     chrome.storage.sync.get(
-      ['isEnabled', 'streamerName', 'volume', 'quality', 'lowLatency', 'chatEnabled'],
+      ['isEnabled', 'streamerName', 'volume', 'quality', 'latencyMode', 'lowLatency',
+       'chatEnabled', 'emoteProviders', 'autoClaimPoints', 'twitchUsername', 'showAdNotifications', 'layout', 'theme'],
       (data) => {
         setIsEnabled(data.isEnabled || false);
         setStreamerName(data.streamerName || '');
         setVolume(data.volume || 50);
         setQuality(data.quality || 'auto');
-        setLowLatency(data.lowLatency !== false);
+        // Migrate from old lowLatency boolean
+        if (data.latencyMode) {
+          setLatencyMode(data.latencyMode);
+        } else {
+          setLatencyMode(data.lowLatency !== false ? 'balanced' : 'stable');
+        }
         setChatEnabled(data.chatEnabled !== false);
+        setEmoteProviders(data.emoteProviders || { bttv: true, ffz: true, seventv: true });
+        setAutoClaimPoints(data.autoClaimPoints !== false);
+        setTwitchUsername(data.twitchUsername || '');
+        setShowAdNotifications(data.showAdNotifications !== false);
+        setLayout(data.layout || 'balanced');
+        const theme: ThemeConfig = data.theme || { preset: 'twitch-dark', custom: {} };
+        setThemePreset(theme.preset);
+        setAccentColor(theme.custom.accentColor || '#9146FF');
+        setChatFontSize(parseInt(theme.custom.chatFontSize || '13'));
+        setChatSpacing(theme.custom.chatSpacing || 'normal');
       }
     );
   }, []);
@@ -57,16 +98,82 @@ const App: React.FC = () => {
     chrome.storage.sync.set({ quality: newQuality });
   };
 
-  const handleLowLatencyToggle = () => {
-    const newState = !lowLatency;
-    setLowLatency(newState);
-    chrome.storage.sync.set({ lowLatency: newState });
+  const handleLatencyChange = (mode: LatencyMode) => {
+    setLatencyMode(mode);
+    chrome.storage.sync.set({ latencyMode: mode });
   };
 
   const handleChatToggle = () => {
     const newState = !chatEnabled;
     setChatEnabled(newState);
     chrome.storage.sync.set({ chatEnabled: newState });
+  };
+
+  const handleEmoteProviderToggle = (provider: keyof EmoteProviders) => {
+    const newProviders = { ...emoteProviders, [provider]: !emoteProviders[provider] };
+    setEmoteProviders(newProviders);
+    chrome.storage.sync.set({ emoteProviders: newProviders });
+  };
+
+  const handleAutoClaimToggle = () => {
+    const newState = !autoClaimPoints;
+    setAutoClaimPoints(newState);
+    chrome.storage.sync.set({ autoClaimPoints: newState });
+  };
+
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const name = e.target.value;
+    setTwitchUsername(name);
+    chrome.storage.sync.set({ twitchUsername: name });
+  };
+
+  const handleLayoutChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newLayout = e.target.value;
+    setLayout(newLayout);
+    chrome.storage.sync.set({ layout: newLayout });
+  };
+
+  const saveTheme = (preset: string, accent: string, fontSize: number, spacing: string) => {
+    const spacingMap: Record<string, string> = { compact: '1px', normal: '3px', cozy: '6px' };
+    const config: ThemeConfig = {
+      preset,
+      custom: {
+        accentColor: accent,
+        chatFontSize: `${fontSize}px`,
+        chatSpacing: spacingMap[spacing] || '3px',
+      },
+    };
+    ThemeManager.saveTheme(config);
+  };
+
+  const handleThemePresetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newPreset = e.target.value;
+    setThemePreset(newPreset);
+    saveTheme(newPreset, accentColor, chatFontSize, chatSpacing);
+  };
+
+  const handleAccentColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newColor = e.target.value;
+    setAccentColor(newColor);
+    saveTheme(themePreset, newColor, chatFontSize, chatSpacing);
+  };
+
+  const handleFontSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newSize = parseInt(e.target.value);
+    setChatFontSize(newSize);
+    saveTheme(themePreset, accentColor, newSize, chatSpacing);
+  };
+
+  const handleSpacingChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newSpacing = e.target.value;
+    setChatSpacing(newSpacing);
+    saveTheme(themePreset, accentColor, chatFontSize, newSpacing);
+  };
+
+  const handleAdNotificationsToggle = () => {
+    const newState = !showAdNotifications;
+    setShowAdNotifications(newState);
+    chrome.storage.sync.set({ showAdNotifications: newState });
   };
 
   return (
@@ -113,12 +220,19 @@ const App: React.FC = () => {
           </select>
         </div>
 
-        <div className="form-group toggle-row">
-          <label>Low Latency</label>
-          <label className="switch small">
-            <input type="checkbox" checked={lowLatency} onChange={handleLowLatencyToggle} />
-            <span className="slider round"></span>
-          </label>
+        <div className="form-group">
+          <label>Latency Mode</label>
+          <div className="latency-slider">
+            {(['ultra-low', 'balanced', 'stable'] as LatencyMode[]).map((mode) => (
+              <button
+                key={mode}
+                className={`latency-option ${latencyMode === mode ? 'active' : ''}`}
+                onClick={() => handleLatencyChange(mode)}
+              >
+                {LATENCY_LABELS[mode]}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="form-group toggle-row">
@@ -127,6 +241,163 @@ const App: React.FC = () => {
             <input type="checkbox" checked={chatEnabled} onChange={handleChatToggle} />
             <span className="slider round"></span>
           </label>
+        </div>
+
+        <div className="form-group">
+          <label>Layout Preset</label>
+          <select value={layout} onChange={handleLayoutChange}>
+            <option value="balanced">Balanced</option>
+            <option value="minimalist">Minimalist</option>
+            <option value="chatFocused">Chat Focused</option>
+            <option value="theater">Theater</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <span className="section-title">Emote Providers</span>
+        <div className="settings">
+          <div className="form-group toggle-row">
+            <label>BTTV</label>
+            <label className="switch small">
+              <input type="checkbox" checked={emoteProviders.bttv} onChange={() => handleEmoteProviderToggle('bttv')} />
+              <span className="slider round"></span>
+            </label>
+          </div>
+          <div className="form-group toggle-row">
+            <label>FFZ</label>
+            <label className="switch small">
+              <input type="checkbox" checked={emoteProviders.ffz} onChange={() => handleEmoteProviderToggle('ffz')} />
+              <span className="slider round"></span>
+            </label>
+          </div>
+          <div className="form-group toggle-row">
+            <label>7TV</label>
+            <label className="switch small">
+              <input type="checkbox" checked={emoteProviders.seventv} onChange={() => handleEmoteProviderToggle('seventv')} />
+              <span className="slider round"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <span className="section-title">Features</span>
+        <div className="settings">
+          <div className="form-group toggle-row">
+            <label>Auto-Claim Points</label>
+            <label className="switch small">
+              <input type="checkbox" checked={autoClaimPoints} onChange={handleAutoClaimToggle} />
+              <span className="slider round"></span>
+            </label>
+          </div>
+
+          <div className="form-group">
+            <label>Twitch Username (for mentions)</label>
+            <input
+              type="text"
+              value={twitchUsername}
+              onChange={handleUsernameChange}
+              placeholder="Your username (auto-detected if empty)"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <span className="section-title">Ad Handling</span>
+        <div className="settings">
+          <div className="form-group toggle-row">
+            <label>Show Notifications</label>
+            <label className="switch small">
+              <input type="checkbox" checked={showAdNotifications} onChange={handleAdNotificationsToggle} />
+              <span className="slider round"></span>
+            </label>
+          </div>
+          <p className="info-text">
+            The player filters ad segments from the stream playlist. This may not catch all ads.
+          </p>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <span className="section-title">Theme</span>
+        <div className="settings">
+          <div className="form-group">
+            <label>Theme Preset</label>
+            <select value={themePreset} onChange={handleThemePresetChange}>
+              {THEME_PRESET_NAMES.map((name) => (
+                <option key={name} value={name}>{THEME_PRESETS[name].label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label>Accent Color</label>
+            <div className="color-input-row">
+              <input
+                type="color"
+                value={accentColor}
+                onChange={handleAccentColorChange}
+                className="color-picker"
+              />
+              <input
+                type="text"
+                value={accentColor}
+                onChange={handleAccentColorChange}
+                placeholder="#9146FF"
+                className="color-text"
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Chat Font Size: {chatFontSize}px</label>
+            <input
+              type="range"
+              min="10"
+              max="20"
+              value={chatFontSize}
+              onChange={handleFontSizeChange}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Chat Spacing</label>
+            <select value={chatSpacing} onChange={handleSpacingChange}>
+              <option value="compact">Compact</option>
+              <option value="normal">Normal</option>
+              <option value="cozy">Cozy</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <span className="section-title">Per-Channel Settings</span>
+        <div className="settings">
+          <p className="info-text">
+            Settings are saved per-channel when you change them while watching a stream.
+            Channel-specific settings override global defaults.
+          </p>
+          {streamerName && (
+            <button
+              className="reset-btn"
+              onClick={() => {
+                resetChannelSettings(streamerName);
+                // Reload settings from global defaults
+                chrome.storage.sync.get(['quality', 'volume', 'chatEnabled', 'latencyMode', 'layout'], (data) => {
+                  setVolume(data.volume || 50);
+                  setQuality(data.quality || 'auto');
+                  setChatEnabled(data.chatEnabled !== false);
+                  setLatencyMode(data.latencyMode || 'balanced');
+                  setLayout(data.layout || 'balanced');
+                });
+              }}
+            >
+              Reset "{streamerName}" to Defaults
+            </button>
+          )}
         </div>
       </div>
 
@@ -137,6 +408,7 @@ const App: React.FC = () => {
           <span>M</span><span>Mute</span>
           <span>F</span><span>Fullscreen</span>
           <span>T</span><span>Theater</span>
+          <span>C</span><span>Cycle Layout</span>
           <span>J / L</span><span>-10s / +10s</span>
           <span>&uarr; / &darr;</span><span>Volume</span>
         </div>
