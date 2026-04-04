@@ -1,55 +1,191 @@
-# Twitch Player Extension
+# 🎮 Twitch Alternate Player
 
-An alternative player for Twitch.tv that provides a customizable viewing experience with additional features.
+> A feature-rich browser extension that replaces Twitch's native player with a fully custom, ad-filtered, and deeply customizable viewing experience.
 
-## Features
+![Chrome/Edge](https://img.shields.io/badge/Browser-Chrome%20%7C%20Edge-blue?logo=googlechrome&logoColor=white)
+![TypeScript](https://img.shields.io/badge/Built%20with-TypeScript-3178C6?logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/Popup-React%2018-61DAFB?logo=react&logoColor=black)
+![hls.js](https://img.shields.io/badge/Streaming-hls.js-FF6600?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PC9zdmc+)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-- Customizable video player interface
-- Adjustable video quality
-- Volume control
-- Lightweight and fast
-- No ads (when used with appropriate stream sources)
+---
 
-## Installation
+## ✨ What It Does
 
-1. Clone this repository
-2. Install dependencies:
-   ```
-   npm install
-   ```
-3. Build the extension:
-   ```
-   npm run build
-   ```
-4. Load the extension in Chrome/Edge:
-   - Open `chrome://extensions/` or `edge://extensions/`
-   - Enable "Developer mode"
-   - Click "Load unpacked" and select the `dist` directory
+Twitch Alternate Player intercepts Twitch stream playlists via a Manifest V3 background service worker, filters ad segments before playback, and injects a fully custom player, chat, and controls interface into any Twitch page. Everything runs locally — no servers, no proxies.
 
-## Development
+---
 
-1. Start the development server:
-   ```
-   npm run dev
-   ```
-2. Load the extension in your browser as described above
-3. The extension will automatically reload when you make changes
+## 🚀 Features
 
-## Usage
+### 🎬 Video Player
+- **HLS-based custom player** powered by [hls.js](https://github.com/video-dev/hls.js), bypassing Twitch's native player entirely
+- **Ad segment filtering** — intercepts the stream M3U8 playlist and strips ad markers before the player loads them
+- **Adjustable quality** — Auto, 1080p60, 720p60, 480p, 360p, Audio Only
+- **3-tier latency control** — Ultra Low, Balanced, Stable — with migration support from legacy boolean settings
+- **Stream URL pre-fetching & caching** — the background worker caches stream tokens for 10 minutes to reduce load times
+- **Popout player** — detach the player into a standalone 640×360 popup window
 
-1. Click the extension icon in your browser toolbar
-2. Enter a Twitch streamer's name
-3. Adjust the volume and quality settings
-4. Toggle the switch to enable/disable the custom player
+### 💬 Chat
+- **Custom IRC-based chat** built from scratch — connects directly to Twitch IRC over WebSocket
+- **BTTV, FFZ, and 7TV emote support** — all three providers toggleable independently
+- **Username highlight** — auto-detects your Twitch username or lets you set it manually for @mention highlighting
+- **Chat sidebar toggle** — show or hide at will
 
-## Building for Production
+### 🖥️ Multi-Stream (Up to 4 Simultaneous)
+- Watch up to **4 streams at once** in an auto-adapting grid layout
+- **One audio source at a time** — click any stream or press **1–4** to switch audio focus
+- Per-stream volume sliders and play/pause controls
+- Sessions persist across page reloads via `chrome.storage.sync`
 
-```
+### 🛠️ Mod Tools
+- Full in-player moderation panel for channels you moderate
+- Dedicated `ModTools.ts` module (~22KB) with mod actions integrated directly into the player UI
+
+### ⚙️ Per-Channel Settings
+- Settings are **saved per-channel** when changed while watching — quality, volume, latency mode, layout
+- Channel-specific settings override global defaults
+- "Reset to Defaults" button available directly in the popup for any channel
+
+### 🎨 Theme System
+| Preset | Description |
+|---|---|
+| **Twitch Dark** | Default Twitch purple dark theme |
+| **Twitch Light** | Light mode with Twitch branding |
+| **OLED Black** | True black for OLED screens |
+| **High Contrast** | Gold accent, maximum contrast for accessibility |
+
+Beyond presets, you can customize:
+- **Accent color** — color picker + hex input
+- **Chat font size** — 10px–20px slider
+- **Chat spacing** — Compact / Normal / Cozy
+
+### 🏗️ Layout Presets
+| Layout | Behavior |
+|---|---|
+| **Balanced** | Standard side-by-side player and chat |
+| **Minimalist** | Minimal UI chrome, more video space |
+| **Chat Focused** | Chat takes priority in the layout |
+| **Theater** | Wide player, chat collapsed or floating |
+
+### ⌨️ Keyboard Shortcuts
+| Key | Action |
+|---|---|
+| `Space` | Play / Pause |
+| `M` | Toggle Mute |
+| `F` | Toggle Fullscreen |
+| `T` | Toggle Theater mode |
+| `C` | Cycle Layout Presets |
+| `J` / `L` | Seek −10s / +10s |
+| `↑` / `↓` | Volume Up / Down |
+| `1` – `4` | Switch audio focus in multi-stream view |
+
+### 🤖 Automation
+- **Auto-Claim Channel Points** — automatically clicks the bonus chest when it appears
+- **Ad notifications** — optional toast notification when an ad segment is detected and filtered
+
+---
+
+## 🛠️ Installation
+
+### Prerequisites
+- Node.js ≥ 18
+- Chrome or Edge browser (any Chromium-based browser)
+
+### Build from Source
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/Allrounder687/Twitch-Alternate-Player.git
+cd Twitch-Alternate-Player
+
+# 2. Install dependencies
+npm install
+
+# 3. Build the extension
 npm run build
 ```
 
-This will create a production-ready build in the `dist` directory.
+### Load in Chrome / Edge
 
-## License
+1. Open `chrome://extensions/` (or `edge://extensions/`)
+2. Enable **Developer Mode** (toggle in the top-right)
+3. Click **"Load unpacked"**
+4. Select the `dist/` folder
 
-MIT
+---
+
+## 💻 Development
+
+```bash
+# Watch mode — auto-rebuilds on file changes
+npm run dev
+```
+
+Then load the `dist/` folder as an unpacked extension. The extension will reflect changes after a page reload.
+
+---
+
+## 🧩 Architecture
+
+The extension is structured as a standard Manifest V3 Chrome extension with four build entry points:
+
+```
+src/
+├── background/          # Service worker (MV3)
+│   ├── index.ts         # Message handling, stream token cache, tab injection
+│   └── twitch-api.ts    # Twitch API — stream token + HLS URL resolution
+│
+├── content/             # Injected into twitch.tv pages
+│   ├── index.ts         # Entry point — mounts/unmounts the player
+│   └── player/
+│       ├── VideoCore.ts         # HLS playback engine (hls.js wrapper)
+│       ├── ControlsUI.ts        # Custom player control bar
+│       ├── PlayerContainer.ts   # Root container, layout orchestration
+│       ├── TwitchChat.ts        # IRC WebSocket chat + message rendering
+│       ├── EmoteManager.ts      # BTTV / FFZ / 7TV emote fetching & caching
+│       ├── MultiStreamManager.ts # Up to 4 simultaneous stream grid
+│       ├── ModTools.ts          # Channel moderation panel
+│       ├── ThemeManager.ts      # CSS variable-based theme engine
+│       ├── ChannelSettings.ts   # Per-channel settings persistence
+│       ├── LayoutPresets.ts     # Layout mode definitions
+│       ├── ToastManager.ts      # In-player toast notifications
+│       ├── PublicAPI.ts         # Exposed API for external tool integration
+│       └── player.css           # All player/chat/controls styles (~35KB)
+│
+├── popup/               # Extension popup (React 18)
+│   ├── index.tsx        # Full settings UI
+│   ├── index.html
+│   └── index.css
+│
+└── popout/              # Standalone popout player window
+```
+
+**Data flow:**
+1. User opens Twitch → content script injected → checks `chrome.storage.sync` for `isEnabled`
+2. If enabled, `PlayerContainer` mounts the custom player, hides Twitch's native UI
+3. Background worker fetches stream token → constructs HLS M3U8 URL
+4. `VideoCore` initializes `hls.js`, loads the stream, filters ad segments
+5. `TwitchChat` connects to Twitch IRC via WebSocket, renders messages with emotes
+6. All settings changes in the popup sync instantly via `chrome.storage.sync.onChanged`
+
+---
+
+## 🔧 Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Language | TypeScript 5 |
+| Bundler | Webpack 5 |
+| Popup UI | React 18 |
+| Stream Playback | hls.js 1.6 |
+| Extension API | Chrome MV3 |
+| Chat Protocol | Twitch IRC over WebSocket |
+| Emotes | BTTV API, FFZ API, 7TV API |
+| Storage | `chrome.storage.sync` |
+
+---
+
+## 📄 License
+
+MIT — see [LICENSE](./LICENSE) for details.
