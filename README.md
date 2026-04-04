@@ -5,8 +5,10 @@
 ![Chrome/Edge](https://img.shields.io/badge/Browser-Chrome%20%7C%20Edge-blue?logo=googlechrome&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/Built%20with-TypeScript-3178C6?logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/Popup-React%2018-61DAFB?logo=react&logoColor=black)
-![hls.js](https://img.shields.io/badge/Streaming-hls.js-FF6600?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PC9zdmc+)
+![hls.js](https://img.shields.io/badge/Streaming-hls.js-FF6600)
 ![License](https://img.shields.io/badge/License-MIT-green)
+![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
+![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen)
 
 ---
 
@@ -124,6 +126,8 @@ npm run dev
 
 Then load the `dist/` folder as an unpacked extension. The extension will reflect changes after a page reload.
 
+> **Tip:** Background service worker changes require a full extension reload (`chrome://extensions/` → refresh icon). Content script changes only need a Twitch tab reload.
+
 ---
 
 ## 🧩 Architecture
@@ -183,6 +187,45 @@ src/
 | Chat Protocol | Twitch IRC over WebSocket |
 | Emotes | BTTV API, FFZ API, 7TV API |
 | Storage | `chrome.storage.sync` |
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome and appreciated! Whether it's a bug fix, a new theme preset, a new layout, or a feature — all PRs are considered.
+
+**Quick start:**
+
+```bash
+# 1. Fork the repo and clone your fork
+git clone https://github.com/<your-username>/Twitch-Alternate-Player.git
+
+# 2. Create a branch
+git checkout -b feat/my-improvement
+
+# 3. Make changes, build, and test
+npm run dev
+
+# 4. Push and open a Pull Request
+```
+
+Please read **[CONTRIBUTING.md](./CONTRIBUTING.md)** for full guidelines including:
+- Coding standards and TypeScript conventions
+- How to add a new theme preset (it's easy!)
+- PR checklist and review process
+- How to report bugs and request features
+
+### Good First Issues
+
+New to the codebase? Look for issues labelled [`good first issue`](../../issues?q=is%3Aopen+label%3A%22good+first+issue%22) — these are scoped to be approachable without deep context.
+
+### Areas That Need Help
+
+- 🧪 **Testing** — the test infrastructure is minimal; help adding proper unit/integration tests is very welcome
+- 🎨 **New theme presets** — creative themes (e.g. Catppuccin, Nord, Dracula) are easy to add and great for first contributions
+- 🇦🇨 **i18n / localization** — the UI is English-only today
+- 📄 **Docs** — screenshots, GIFs, wiki pages, anything that helps new users get started faster
+- 🔍 **Bug reports** — if something doesn't work on your stream or browser version, please open an issue
 
 ---
 
